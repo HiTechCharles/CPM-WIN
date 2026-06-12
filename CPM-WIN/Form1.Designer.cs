@@ -50,6 +50,7 @@
             this.resetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stoPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.speakToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.AssetsNUD)).BeginInit();
             this.MainMenuMST.SuspendLayout();
             this.SuspendLayout();
@@ -242,6 +243,7 @@
             // 
             this.timerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.resetToolStripMenuItem,
+            this.speakToolStripMenuItem,
             this.startToolStripMenuItem,
             this.stoPToolStripMenuItem});
             this.timerToolStripMenuItem.Name = "timerToolStripMenuItem";
@@ -272,6 +274,14 @@
             this.stoPToolStripMenuItem.Text = "St&op";
             this.stoPToolStripMenuItem.Click += new System.EventHandler(this.stoPToolStripMenuItem_Click);
             // 
+            // speakToolStripMenuItem
+            // 
+            this.speakToolStripMenuItem.Name = "speakToolStripMenuItem";
+            this.speakToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
+            this.speakToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
+            this.speakToolStripMenuItem.Text = "Sp&eak";
+            this.speakToolStripMenuItem.Click += new System.EventHandler(this.speakToolStripMenuItem_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(15F, 29F);
@@ -294,7 +304,7 @@
             this.Font = new System.Drawing.Font("Tahoma", 18F, System.Drawing.FontStyle.Bold);
             this.ForeColor = System.Drawing.Color.White;
             this.MainMenuStrip = this.MainMenuMST;
-            this.Margin = new System.Windows.Forms.Padding(7, 7, 7, 7);
+            this.Margin = new System.Windows.Forms.Padding(7);
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Computer Picker for NES Monopoly";
@@ -330,6 +340,7 @@
         private System.Windows.Forms.ToolStripMenuItem readToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem viewRecordsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem newGameToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem speakToolStripMenuItem;
     }
 }
 

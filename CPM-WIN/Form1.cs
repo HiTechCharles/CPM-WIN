@@ -13,35 +13,56 @@ namespace CPM_WIN
     {
         #region Constants
         private const int UI_TIMER_INTERVAL_MS = 200;
-        private const int MAX_SPEAK_CHARS = 4000;
         private const int MAX_PLAYER_SELECTION_ATTEMPTS = 100;
         private const int DEFAULT_SPEECH_RATE = 3;
         private const int DEFAULT_SPEECH_VOLUME = 100;
         private const int MAX_LEVEL = 7;
         private const int MIN_LEVEL = 1;
+        private const int AUTO_START_DELAY_MS = 120000; // 2 minutes
+        private const int AUTO_START_DELAY_MINUTES = AUTO_START_DELAY_MS / 60000;
+        private const string FILE_LAST_GAME = "Last Game.txt";
+        private const string FILE_FULL_LOG = "Full Log.txt";
+        private const string FILE_PLAYER_REPORT = "Player Report.txt";
+        private const string FILE_LEVEL_PROGRESS = "Level Progress.txt";
+        #endregion
+
+        #region Instance Variables
+        private readonly Timer _uiTimer;
+        private readonly Timer _autoStartTimer;
+        private readonly SpeechSynthesizer _synth;
+        private readonly object _synthLock = new object();
+        private readonly Stopwatch _gameTimer = new Stopwatch();
+        private readonly Random _rng = new Random();
+        private bool[] _chosen = new bool[8];
+        private TimeSpan _nextSpeakTime = TimeSpan.FromMinutes(10);
+        private TimeSpan _speakInterval = TimeSpan.FromMinutes(10);
+        private bool _newGameStarted = false;
         #endregion
 
         #region Static Variables
-        public static Stopwatch gameTimer = new Stopwatch();
-        public static Random RNG = new Random();
-        public static bool[] Chosen = new bool[8];  // has a player been chosen yet?
-        public static string[] PlayerName = { "Arthur", "Gertrude", "Erwin", "Maude", "Carmen", "Isaac", "Penelope", "Ollie" };  // player names
-        public static string AppDirectory;
-        public static string LastGame;
-        public static string FullLog;
-        public static string PlayerReport;
-        public static SpeechSynthesizer synth = new SpeechSynthesizer();
-        public static object synthLock = new object();
-        public static object rngLock = new object();
-        public static bool NewGameStarted = false;  // flag to indicate if a new game has started
-        public static TimeSpan nextSpeakTime = TimeSpan.FromMinutes(10);  // next time to speak elapsed
-        public static TimeSpan speakInterval = TimeSpan.FromMinutes(10);  // interval between speaks
-        public static Timer uiTimer;  // UI timer to update GameTimeTB periodically
+        private static readonly string[] PlayerNames = 
+        { 
+            "Arthur", "Gertrude", "Erwin", "Maude", "Carmen", "Isaac", "Penelope", "Ollie" 
+        };
+        public static string AppDirectory { get; private set; }
+        public static string LastGamePath { get; private set; }
+        public static string FullLogPath { get; private set; }
+        public static string PlayerReportPath { get; private set; }
+        
+        // Temporary bridge for ReportViewer - consider refactoring to dependency injection
+        private static Form1 _instance;
         #endregion
 
-        static Form1()  // Static constructor to initialize paths robustly
+        static Form1()
         {
-            // Prefer OneDrive consumer Documents folder when available, otherwise fall back to the user's Documents folder
+            AppDirectory = InitializeAppDirectory();
+            LastGamePath = Path.Combine(AppDirectory, FILE_LAST_GAME);
+            FullLogPath = Path.Combine(AppDirectory, FILE_FULL_LOG);
+            PlayerReportPath = Path.Combine(AppDirectory, FILE_PLAYER_REPORT);
+        }
+
+        private static string InitializeAppDirectory()
+        {
             var oneDriveDocs = Environment.GetEnvironmentVariable("onedriveconsumer");
             string documentsRoot;
 
@@ -64,120 +85,102 @@ namespace CPM_WIN
                 documentsRoot = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             }
 
-            AppDirectory = Path.Combine(documentsRoot, "CPM");
-            LastGame = Path.Combine(AppDirectory, "Last Game.txt");
-            FullLog = Path.Combine(AppDirectory, "Full Log.txt");
-            PlayerReport = Path.Combine(AppDirectory, "Player Report.txt");
+            string appDir = Path.Combine(documentsRoot, "CPM");
 
-            // Ensure directory exists
             try
             {
-                if (!Directory.Exists(AppDirectory))
-                    Directory.CreateDirectory(AppDirectory);
+                if (!Directory.Exists(appDir))
+                    Directory.CreateDirectory(appDir);
             }
             catch (Exception ex)
             {
-                // Avoid throwing from static ctor; log instead
-                Debug.WriteLine("Failed to ensure AppDirectory: " + ex.Message);
+                Debug.WriteLine($"Failed to ensure AppDirectory: {ex.Message}");
             }
+
+            return appDir;
         }
 
-        public Form1()  // Constructor
+        public Form1()
         {
             InitializeComponent();
+            _instance = this;
+
+            _synth = new SpeechSynthesizer();
             try
             {
-                synth.Rate = DEFAULT_SPEECH_RATE;  // set speech rate
-                synth.Volume = DEFAULT_SPEECH_VOLUME;  // set speech volume
+                _synth.Rate = DEFAULT_SPEECH_RATE;
+                _synth.Volume = DEFAULT_SPEECH_VOLUME;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Speech initialization failed: " + ex.Message);
+                Debug.WriteLine($"Speech initialization failed: {ex.Message}");
             }
 
-            // Update the GameTimeTB every 200 ms
-            uiTimer = new Timer { Interval = UI_TIMER_INTERVAL_MS };
-            uiTimer.Tick += UiTimer_Tick;
-            uiTimer.Start();
+            _uiTimer = new Timer { Interval = UI_TIMER_INTERVAL_MS };
+            _uiTimer.Tick += UiTimer_Tick;
+            _uiTimer.Start();
 
-            timerToolStripMenuItem.Enabled = false;  // Disable timer menu
+            _autoStartTimer = new Timer { Interval = AUTO_START_DELAY_MS };
+            _autoStartTimer.Tick += AutoStartTimer_Tick;
+
+            timerToolStripMenuItem.Enabled = false;
         }
 
-        public void UiTimer_Tick(object sender, EventArgs e)
+        private void UiTimer_Tick(object sender, EventArgs e)
         {
-            // Update the game timer display
-            var elapsed = gameTimer.Elapsed;
+            var elapsed = _gameTimer.Elapsed;
+            GameTimeTB.Text = elapsed.TotalHours >= 1 
+                ? elapsed.ToString(@"h\:mm\:ss") 
+                : elapsed.ToString(@"mm\:ss");
 
-            // Format and display elapsed time
-            if (elapsed.TotalHours >= 1)
+            if (_gameTimer.IsRunning)
             {
-                GameTimeTB.Text = elapsed.ToString(@"h\:mm\:ss");
+                TryScheduleSpeak(elapsed);
             }
-            else
+        }
+
+        private void AutoStartTimer_Tick(object sender, EventArgs e)
+        {
+            _autoStartTimer.Stop();
+
+            if (!_gameTimer.IsRunning)
             {
-                GameTimeTB.Text = elapsed.ToString(@"mm\:ss");
+                _gameTimer.Start();
+                SpeakAsync("Game timer has started.");
             }
-
-            if (!gameTimer.IsRunning)
-                return;
-
-            TryScheduleSpeak(elapsed);
         }
 
         private void TryScheduleSpeak(TimeSpan elapsed)
         {
-            // Fast check to avoid taking the synth lock unnecessarily
-            if (elapsed < nextSpeakTime)
+            if (elapsed < _nextSpeakTime)
                 return;
 
-            // Compute the next speak time using integer minutes to avoid rounding surprises
-            int intervalMinutes = (int)speakInterval.TotalMinutes;
-            if (intervalMinutes <= 0)
-                intervalMinutes = 1; // defensive
-
+            int intervalMinutes = Math.Max(1, (int)_speakInterval.TotalMinutes);
             int multiplier = (int)elapsed.TotalMinutes / intervalMinutes;
             var computedNext = TimeSpan.FromMinutes((multiplier + 1) * intervalMinutes);
 
-            // Lock synth to avoid queueing overlapping speech or racing with Dispose/SpeakAsyncCancelAll
-            lock (synthLock)
+            lock (_synthLock)
             {
                 try
                 {
-                    // If the synthesizer is already speaking, skip scheduling another phrase.
-                    // This prevents long queues of overlapping "elapsed time" announcements.
-                    if (synth != null && synth.State == SynthesizerState.Speaking)
+                    if (_synth.State == SynthesizerState.Speaking)
                     {
-                        // update nextSpeakTime so we don't repeatedly try again until the next interval
-                        nextSpeakTime = computedNext;
+                        _nextSpeakTime = computedNext;
                         return;
                     }
 
-                    // Speak without double-locking: call the internal method that does NOT re-lock.
                     SpeakElapsedInternal(elapsed);
-
-                    // Update nextSpeakTime to the next interval target
-                    nextSpeakTime = computedNext;
+                    _nextSpeakTime = computedNext;
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("TryScheduleSpeak failed: " + ex.Message);
+                    Debug.WriteLine($"TryScheduleSpeak failed: {ex.Message}");
                 }
-            }
-        }
-
-        // Public API preserved for callers that expect SpeakElapsed to lock internally.
-        // This keeps existing callers working while allowing TryScheduleSpeak to call the internal worker.
-        public void SpeakElapsed(TimeSpan ts)
-        {
-            lock (synthLock)
-            {
-                SpeakElapsedInternal(ts);
             }
         }
 
         private void SpeakElapsedInternal(TimeSpan ts)
         {
-            // Build a concise, human-friendly phrase (no locks here)
             int hours = (int)ts.TotalHours;
             int minutes = ts.Minutes;
             int seconds = ts.Seconds;
@@ -185,195 +188,211 @@ namespace CPM_WIN
             string phrase;
             if (hours > 0)
             {
-                phrase = $"Elapsed time: {hours} hour{(hours > 1 ? "s" : "")} {minutes} minute{(minutes != 1 ? "s" : "")}.";
+                phrase = $"Elapsed time: {hours} hour{Pluralize(hours)} {minutes} minute{Pluralize(minutes)}.";
             }
             else if (minutes > 0)
             {
-                phrase = $"Elapsed time: {minutes} minute{(minutes != 1 ? "s" : "")} {seconds} second{(seconds != 1 ? "s" : "")}.";
+                phrase = $"Elapsed time: {minutes} minute{Pluralize(minutes)} {seconds} second{Pluralize(seconds)}.";
             }
             else
             {
-                phrase = $"Elapsed time: {seconds} second{(seconds != 1 ? "s" : "")}.";
+                phrase = $"Elapsed time: {seconds} second{Pluralize(seconds)}.";
             }
 
             try
             {
-                // synth is expected to be locked by callers that need to avoid races with Dispose.
-                // Call SpeakAsync directly; it queues the speech on a background thread.
-                synth?.SpeakAsync(phrase);
+                _synth?.SpeakAsync(phrase);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("SpeakElapsedInternal failed: " + ex.Message);
+                Debug.WriteLine($"SpeakElapsedInternal failed: {ex.Message}");
             }
         }
 
-        public void SaveLastGame()  // save game function
+        private static string Pluralize(int count)
+        {
+            return count != 1 ? "s" : "";
+        }
+
+        private void SpeakAsync(string text)
+        {
+            lock (_synthLock)
+            {
+                try
+                {
+                    _synth?.SpeakAsync(text);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"SpeakAsync failed: {ex.Message}");
+                }
+            }
+        }
+
+        private void Speak(string text)
+        {
+            lock (_synthLock)
+            {
+                try
+                {
+                    _synth?.Speak(text);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Speak failed: {ex.Message}");
+                }
+            }
+        }
+
+        // Public method for external speech requests (e.g., from ReportViewer)
+        public static void SpeakText(string text)
+        {
+            _instance?.SpeakAsync(text);
+        }
+
+        public static void CancelAllSpeech()
+        {
+            if (_instance?._synth != null)
+            {
+                lock (_instance._synthLock)
+                {
+                    try
+                    {
+                        _instance._synth.SpeakAsyncCancelAll();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"CancelAllSpeech failed: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        public void SaveLastGame()
         {
             try
             {
-                // Ensure app directory exists
-                if (!Directory.Exists(AppDirectory))
-                    Directory.CreateDirectory(AppDirectory);
+                EnsureDirectoryExists(AppDirectory);
 
-                using (StreamWriter Writer = new StreamWriter(LastGame, false))
+                using (var writer = new StreamWriter(LastGamePath, false))
                 {
-                    Writer.WriteLine("          Date & Time:  " + DateTimeTB.Text);  // write date and time
-                    Writer.WriteLine("# of Computer Players:  " + NUMCPUTB.Text);  // write number of computer players
-                    Writer.WriteLine("         Player Names:  " + NamesTB.Text);  // write computer player names
-                    Writer.WriteLine("            Game Rule:  " + GameRuleTB.Text);  // write game rule
-                    Writer.WriteLine("         Elapsed Time:  " + GameTimeTB.Text);  // write game time
-                    Writer.WriteLine("         Total Assets:  " + AssetsNUD.Value.ToString("C", CultureInfo.CurrentCulture));  // write total assets
-
-                    if (AssetsNUD.Value > 0)
-                    {
-                        Writer.WriteLine("               Result:  Win");
-                    }
-                    else
-                    {
-                        Writer.WriteLine("               Result:  Loss");
-                    }
-                    Writer.WriteLine("\n--------------------------------------------------");
+                    writer.WriteLine($"          Date & Time:  {DateTimeTB.Text}");
+                    writer.WriteLine($"# of Computer Players:  {NUMCPUTB.Text}");
+                    writer.WriteLine($"         Player Names:  {NamesTB.Text}");
+                    writer.WriteLine($"            Game Rule:  {GameRuleTB.Text}");
+                    writer.WriteLine($"         Elapsed Time:  {GameTimeTB.Text}");
+                    writer.WriteLine($"         Total Assets:  {AssetsNUD.Value.ToString("C", CultureInfo.CurrentCulture)}");
+                    writer.WriteLine($"               Result:  {(AssetsNUD.Value > 0 ? "Win" : "Loss")}");
+                    writer.WriteLine("\n--------------------------------------------------");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error saving game: " + ex.Message, "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error saving game: {ex.Message}", "Save Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        public void SaveLevel()  // save level function
+        public void SaveLevel()
         {
-            string LevelFile = Path.Combine(AppDirectory, "Level Progress.txt");
+            string levelFile = Path.Combine(AppDirectory, FILE_LEVEL_PROGRESS);
+
             if (!int.TryParse(NUMCPUTB.Text, out int currentLevel))
             {
                 currentLevel = MIN_LEVEL;
             }
+
             int nextLevel = currentLevel + 1;
 
             try
             {
-                if (nextLevel > MAX_LEVEL || AssetsNUD.Value <= 0)  // if max level reached or no assets, do not save
+                if (nextLevel > MAX_LEVEL || AssetsNUD.Value <= 0)
                 {
-                    if (File.Exists(LevelFile))
-                    {
-                        try { File.Delete(LevelFile); }
-                        catch (Exception exDel) { Debug.WriteLine("Delete LevelFile failed: " + exDel.Message); }
-                    }
+                    DeleteFileIfExists(levelFile);
                     return;
                 }
 
                 if (AssetsNUD.Value > 0)
                 {
-                    // Save level progress
-                    using (StreamWriter writer = new StreamWriter(LevelFile, false))
-                    {
-                        writer.WriteLine(nextLevel.ToString());
-                    }
+                    File.WriteAllText(levelFile, nextLevel.ToString());
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("SaveLevel failed: " + ex.Message);
+                Debug.WriteLine($"SaveLevel failed: {ex.Message}");
             }
         }
 
-        public int LoadLevel()  // load level function
+        public int LoadLevel()
         {
-            string LevelFile = Path.Combine(AppDirectory, "Level Progress.txt");
+            string levelFile = Path.Combine(AppDirectory, FILE_LEVEL_PROGRESS);
+
             try
             {
-                if (File.Exists(LevelFile))
+                if (File.Exists(levelFile))
                 {
-                    using (StreamReader reader = new StreamReader(LevelFile))
+                    string content = File.ReadAllText(levelFile);
+                    if (int.TryParse(content, out int savedLevel) && 
+                        savedLevel >= MIN_LEVEL && savedLevel <= MAX_LEVEL)
                     {
-                        string line = reader.ReadLine();
-                        if (int.TryParse(line, out int savedLevel))
-                        {
-                            if (savedLevel >= MIN_LEVEL && savedLevel <= MAX_LEVEL)
-                            {
-                                NUMCPUTB.Text = savedLevel.ToString();
-                                return savedLevel;
-                            }
-                        }
+                        NUMCPUTB.Text = savedLevel.ToString();
+                        return savedLevel;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("LoadLevel failed: " + ex.Message);
+                Debug.WriteLine($"LoadLevel failed: {ex.Message}");
             }
 
-            NUMCPUTB.Text = MIN_LEVEL.ToString();  // default to level 1 if no file or error
-            return MIN_LEVEL;  // default return value
+            NUMCPUTB.Text = MIN_LEVEL.ToString();
+            return MIN_LEVEL;
         }
 
         public void NewGame()
         {
-            // Reset chosen players array
-            Array.Clear(Chosen, 0, Chosen.Length);
-
-            // Clear previous player names
+            Array.Clear(_chosen, 0, _chosen.Length);
             NamesTB.Text = string.Empty;
 
-            int savedLevel = LoadLevel();  // load saved level
-            DateTimeTB.Text = DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToShortTimeString();
+            int savedLevel = LoadLevel();
+            DateTimeTB.Text = $"{DateTime.Now.ToShortDateString()} {DateTime.Now.ToShortTimeString()}";
 
-            int playersToPick = Math.Min(savedLevel, PlayerName.Length);
+            int playersToPick = Math.Min(savedLevel, PlayerNames.Length);
             for (int i = 0; i < playersToPick; i++)
             {
                 GetPlayer();
             }
 
-            // Remove any trailing separator
             NamesTB.Text = NamesTB.Text.TrimEnd(' ', '-');
+            DeleteFileIfExists(LastGamePath);
 
-            if (File.Exists(LastGame))
-            {
-                try { File.Delete(LastGame); }
-                catch (Exception exDel) { Debug.WriteLine("Delete LastGame failed: " + exDel.Message); }
-            }
-
-            timerToolStripMenuItem.Enabled = true;  // Enable timer menu
+            timerToolStripMenuItem.Enabled = true;
             GameRule();
-            gameTimer.Reset();
+            _gameTimer.Reset();
+            _nextSpeakTime = _speakInterval;
+            _newGameStarted = true;
 
-            // Reset next speak interval after new game
-            nextSpeakTime = speakInterval;
+            ReadGameInfo();
+            SpeakAsync($"New game started, Game timer will automatically start in {AUTO_START_DELAY_MINUTES} minutes.");
 
-            // Set flag to indicate a new game has started
-            NewGameStarted = true;
+            _autoStartTimer.Stop();
+            _autoStartTimer.Start();
         }
 
-        public void SaveFullLog()  // save full log function
+        public void SaveFullLog()
         {
             try
             {
-                if (!File.Exists(LastGame))
+                if (!File.Exists(LastGamePath))
                     return;
 
-                string lastRunContents = File.ReadAllText(LastGame);
-
-                // Ensure directory exists
-                string dir = Path.GetDirectoryName(FullLog);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                {
-                    try
-                    {
-                        Directory.CreateDirectory(dir);
-                    }
-                    catch (Exception exDir)
-                    {
-                        Debug.WriteLine("SaveFullLog directory ensure failed: " + exDir.Message);
-                        return;
-                    }
-                }
-
-                File.AppendAllText(FullLog, lastRunContents);
+                string lastRunContents = File.ReadAllText(LastGamePath);
+                EnsureDirectoryExists(Path.GetDirectoryName(FullLogPath));
+                File.AppendAllText(FullLogPath, lastRunContents);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("SaveFullLog failed: " + ex.Message);
+                Debug.WriteLine($"SaveFullLog failed: {ex.Message}");
             }
         }
 
@@ -381,68 +400,62 @@ namespace CPM_WIN
         {
             try
             {
+                if (!File.Exists(FullLogPath))
+                    return;
+
                 long wins = 0, losses = 0, currentStreak = 0, longestStreak = 0;
 
-                // If no full log, return early
-                if (!File.Exists(FullLog))
+                string[] lines = File.ReadAllLines(FullLogPath);
+
+                foreach (string line in lines)
                 {
-                    return;
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+
+                    if (line.Contains("Result:") && line.Contains("Win"))
+                    {
+                        wins++;
+                        currentStreak++;
+                        longestStreak = Math.Max(longestStreak, currentStreak);
+                    }
+                    else if (line.Contains("Result:") && line.Contains("Loss"))
+                    {
+                        losses++;
+                        currentStreak = 0;
+                    }
                 }
 
-                using (var reader = new StreamReader(FullLog))
-                using (var writer = new StreamWriter(PlayerReport, false))
+                using (var writer = new StreamWriter(PlayerReportPath, false))
                 {
                     writer.WriteLine("NES CPM Player Report");
                     writer.WriteLine(DateTime.Now.ToLongDateString());
                     writer.WriteLine();
-
-                    while (!reader.EndOfStream)
-                    {
-                        string line = reader.ReadLine();
-                        if (string.IsNullOrWhiteSpace(line))
-                            continue;
-
-                        // compute longest win streak and count wins/losses
-                        if (line.Contains("Result:") && line.Contains("Win"))
-                        {
-                            wins++;
-                            currentStreak++;
-                            if (currentStreak > longestStreak)
-                                longestStreak = currentStreak;
-                        }
-                        else if (line.Contains("Result:") && line.Contains("Loss"))
-                        {
-                            losses++;
-                            currentStreak = 0;
-                        }
-                    }
-
-                    double totalGames = (double)(wins + losses);
-                    double winRate = totalGames > 0.0 ? (wins / totalGames) * 100.0 : 0.0;
-
                     writer.WriteLine();
-                    writer.WriteLine("      Games Played:  " + (wins + losses).ToString());
-                    writer.WriteLine("              Wins:  " + wins.ToString());
-                    writer.WriteLine("Longest Win Streak:  " + longestStreak.ToString());
-                    writer.WriteLine("          Win Rate:  " + winRate.ToString("F2") + "%");
-                    writer.WriteLine("            Losses:  " + losses.ToString());
-                    writer.WriteLine("     Current Level:  " + LoadLevel().ToString());
+                    writer.WriteLine($"      Games Played:  {wins + losses}");
+                    writer.WriteLine($"              Wins:  {wins}");
+                    writer.WriteLine($"Longest Win Streak:  {longestStreak}");
+
+                    double totalGames = wins + losses;
+                    double winRate = totalGames > 0 ? (wins / totalGames) * 100.0 : 0.0;
+                    writer.WriteLine($"          Win Rate:  {winRate:F2}%");
+                    writer.WriteLine($"            Losses:  {losses}");
+                    writer.WriteLine($"     Current Level:  {LoadLevel()}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("GeneratePlayerReport failed: " + ex.Message);
+                Debug.WriteLine($"GeneratePlayerReport failed: {ex.Message}");
             }
         }
 
-        public void GameRule()  // things you should do during the game
+        public void GameRule()
         {
-            string[] Law =
+            string[] laws =
             {
                 "No trades until computer offers a trade first.",
                 "For your first monopoly, you must build from scratch to hotels in one turn.",
                 "Always roll to get out of jail.",
-                "Always pay to get out of jail",
+                "Always pay to get out of jail.",
                 "Cannot buy any railroads.",
                 "Cannot buy orange or red properties.",
                 "Can only build on 1 monopoly.",
@@ -457,102 +470,114 @@ namespace CPM_WIN
                 "Auction off the first unowned property you land on."
             };
 
-            int lawNum;
-            lock (rngLock)
-            {
-                lawNum = RNG.Next(0, Law.Length);  // pick a number safely using shared RNG
-            }
-
-            GameRuleTB.Text = Law[lawNum];
+            int lawNum = _rng.Next(0, laws.Length);
+            GameRuleTB.Text = laws[lawNum];
         }
 
-        public void GetPlayer() // pick players for the game
+        public void GetPlayer()
         {
-            // If all players have been chosen, reset the flags so we don't infinite-loop
-            if (Chosen.All(c => c))
+            if (_chosen.All(c => c))
             {
-                Array.Clear(Chosen, 0, Chosen.Length);
+                Array.Clear(_chosen, 0, _chosen.Length);
             }
 
-            int playerNum = 0;
-            int attempts = 0;
-
-            while (attempts < MAX_PLAYER_SELECTION_ATTEMPTS)
+            for (int attempts = 0; attempts < MAX_PLAYER_SELECTION_ATTEMPTS; attempts++)
             {
-                attempts++;
-                lock (rngLock)
-                {
-                    playerNum = RNG.Next(0, PlayerName.Length);
-                }
+                int playerNum = _rng.Next(0, PlayerNames.Length);
 
-                if (!Chosen[playerNum])
+                if (!_chosen[playerNum])
                 {
-                    Chosen[playerNum] = true;
-                    NamesTB.Text += PlayerName[playerNum] + " - ";
+                    _chosen[playerNum] = true;
+                    NamesTB.Text += $"{PlayerNames[playerNum]} - ";
                     return;
                 }
             }
 
             // Fallback: pick first available
-            for (int i = 0; i < PlayerName.Length; i++)
+            for (int i = 0; i < PlayerNames.Length; i++)
             {
-                if (!Chosen[i])
+                if (!_chosen[i])
                 {
-                    Chosen[i] = true;
-                    NamesTB.Text += PlayerName[i] + " - ";
+                    _chosen[i] = true;
+                    NamesTB.Text += $"{PlayerNames[i]} - ";
                     return;
                 }
             }
         }
 
-        // Dispose managed resources that live beyond form lifetime
+        private static void EnsureDirectoryExists(string path)
+        {
+            if (!string.IsNullOrEmpty(path) && !Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+        }
+
+        private static void DeleteFileIfExists(string filePath)
+        {
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Delete file failed: {ex.Message}");
+                }
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
 
             try
             {
-                uiTimer?.Stop();
+                _uiTimer?.Stop();
+                _autoStartTimer?.Stop();
 
-                // Try to cancel speech early to avoid blocking on dispose
-                lock (synthLock)
+                lock (_synthLock)
                 {
                     try
                     {
-                        synth?.SpeakAsyncCancelAll();
+                        _synth?.SpeakAsyncCancelAll();
                     }
-                    catch (Exception exSpeakCancel)
+                    catch (Exception ex)
                     {
-                        Debug.WriteLine("Failed to cancel speech during closing: " + exSpeakCancel.Message);
+                        Debug.WriteLine($"Failed to cancel speech during closing: {ex.Message}");
                     }
                 }
 
-                if (NewGameStarted)  // only save if a new game was started
+                if (_newGameStarted)
                 {
-                    SaveLastGame();  // save last game
-                    SaveFullLog();  // save full log
-                    GeneratePlayerReport();  // generate player report
-                    SaveLevel();  // save level progress
+                    SaveLastGame();
+                    SaveFullLog();
+                    GeneratePlayerReport();
+                    SaveLevel();
                 }
 
-                uiTimer?.Dispose();
+                _uiTimer?.Dispose();
+                _autoStartTimer?.Dispose();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("OnFormClosing cleanup failed: " + ex.Message);
+                Debug.WriteLine($"OnFormClosing cleanup failed: {ex.Message}");
             }
 
             try
             {
-                lock (synthLock)
+                lock (_synthLock)
                 {
-                    synth?.Dispose();
+                    _synth?.Dispose();
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Failed disposing synth: " + ex.Message);
+                Debug.WriteLine($"Failed disposing synth: {ex.Message}");
             }
+
+            _instance = null;
         }
 
         #region Menu Event Handlers
@@ -563,117 +588,83 @@ namespace CPM_WIN
 
         private void readToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            try
-            {
-                // Cancel quickly to avoid race with new speech
-                lock (synthLock)
-                {
-                    synth?.SpeakAsyncCancelAll();
-                }
+            ReadGameInfo();
+        }
 
-                if (!File.Exists(LastGame))
-                {
-                    lock (synthLock)
-                    {
-                        synth?.SpeakAsync("No saved game found.");
-                    }
-                    return;
-                }
+        private void ReadGameInfo()
+        {
+            if (!_newGameStarted)
+                return;
 
-                // Read file and limit spoken length to avoid overwhelming the synthesizer.
-                // Do I/O outside of the synth lock to avoid blocking other speech operations.
-                string todayLogContents = File.ReadAllText(LastGame);
-
-                // Truncate if extremely long
-                if (todayLogContents.Length > MAX_SPEAK_CHARS)
-                    todayLogContents = todayLogContents.Substring(0, MAX_SPEAK_CHARS) + " ... (truncated)";
-
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync(todayLogContents);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("readToolStripMenuItem failed: " + ex.Message);
-            }
+            Speak("Reading game information.");
+            Speak($"Date & Time:  {DateTimeTB.Text}");
+            Speak($"Number of Computer Players:  {NUMCPUTB.Text}");
+            Speak($"Player names:  {NamesTB.Text}");
+            Speak($"Game rule:  {GameRuleTB.Text}");
         }
 
         private void resetToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            gameTimer.Reset();
-            nextSpeakTime = speakInterval; // Reset speak timer as well
-
-            try
-            {
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync("Game timer has been reset.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("Speech failed in reset: " + ex.Message);
-            }
+            _gameTimer.Reset();
+            _nextSpeakTime = _speakInterval;
+            SpeakAsync("Game timer has been reset.");
         }
 
         private void startToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (gameTimer.IsRunning)
+            if (_gameTimer.IsRunning)
             {
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync("Game timer is already running.");
-                }
+                SpeakAsync("Game timer is already running.");
             }
             else
             {
-                gameTimer.Start();
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync("Game timer started.");
-                }
+                _gameTimer.Start();
+                SpeakAsync("Game timer started.");
             }
         }
 
         private void stoPToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (gameTimer.IsRunning)
+            if (_gameTimer.IsRunning)
             {
-                gameTimer.Stop();
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync("Game timer stopped.");
-                }
+                _gameTimer.Stop();
+                SpeakAsync("Game timer stopped.");
             }
             else
             {
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync("Game timer is already stopped.");
-                }
+                SpeakAsync("Game timer is already stopped.");
             }
         }
 
         private void viewRecordsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             GeneratePlayerReport();
-            ReportViewer prForm = new ReportViewer();
-            prForm.ShowDialog();
+            using (var prForm = new ReportViewer())
+            {
+                prForm.ShowDialog();
+            }
         }
 
         private void newGameToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (NewGameStarted)  // if a new game is already in progress
+            if (_newGameStarted)
             {
-                lock (synthLock)
-                {
-                    synth?.SpeakAsync("A game is already in progress.");
-                }
+                SpeakAsync("A game is already in progress.");
                 return;
             }
 
             NewGame();
+        }
+
+        private void speakToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SpeakTimer();
+        }
+
+        private void SpeakTimer()
+        {
+            string status = _gameTimer.IsRunning ? "running" : "stopped";
+            Speak($"The game timer is currently {status}, and the elapsed time is {_gameTimer.Elapsed:hh\\:mm\\:ss}.");
         }
         #endregion
     }

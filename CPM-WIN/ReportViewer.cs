@@ -6,107 +6,119 @@ namespace CPM_WIN
 {
     public partial class ReportViewer : Form
     {
-        public ReportViewer()  // Constructor
+        private const char FILE_TYPE_FULL_LOG = 'F';
+        private const char FILE_TYPE_LAST_GAME = 'L';
+        private const char FILE_TYPE_PLAYER_REPORT = 'P';
+
+        public ReportViewer()
         {
             InitializeComponent();
-            GetReportFilePath('F');  // Load the full log by default
-            
+            LoadReport(FILE_TYPE_FULL_LOG);
         }
 
-        public void SetControls(char fileType)
+        private void SetMenuCheckStates(char fileType)
+        {
+            fullLogToolStripMenuItem.Checked = fileType == FILE_TYPE_FULL_LOG;
+            fullLogToolStripMenuItem.AccessibleName = $"Full Log {(fileType == FILE_TYPE_FULL_LOG ? "checked" : "unchecked")}.";
+
+            lastGameToolStripMenuItem.Checked = fileType == FILE_TYPE_LAST_GAME;
+            lastGameToolStripMenuItem.AccessibleName = $"Last Game {(fileType == FILE_TYPE_LAST_GAME ? "checked" : "unchecked")}.";
+
+            playerreportToolStripMenuItem.Checked = fileType == FILE_TYPE_PLAYER_REPORT;
+            playerreportToolStripMenuItem.AccessibleName = $"Player Report {(fileType == FILE_TYPE_PLAYER_REPORT ? "checked" : "unchecked")}.";
+        }
+
+        private string GetFilePath(char fileType)
         {
             switch (fileType)
             {
-                case 'F':
-                    fullLogToolStripMenuItem.Checked = true;
-                    fullLogToolStripMenuItem.AccessibleName = "Full Log checked.";
-                    lastGameToolStripMenuItem.Checked = false;
-                    lastGameToolStripMenuItem.AccessibleName = "Last Game unchecked.";
-                    playerreportToolStripMenuItem.Checked = false;
-                    playerreportToolStripMenuItem.AccessibleName = "Player Report unchecked.";
-                    break;
-                case 'L':
-                    fullLogToolStripMenuItem.Checked = false;
-                    fullLogToolStripMenuItem.AccessibleName = "Full Log unchecked.";
-                    lastGameToolStripMenuItem.Checked = true;
-                    lastGameToolStripMenuItem.AccessibleName = "Last Game checked.";
-                    playerreportToolStripMenuItem.Checked = false;
-                    playerreportToolStripMenuItem.AccessibleName = "Player Report unchecked.";
-                    break;
-                case 'P':
-                    fullLogToolStripMenuItem.Checked = false;
-                    fullLogToolStripMenuItem.AccessibleName = "Full Log unchecked.";
-                    lastGameToolStripMenuItem.Checked = false;
-                    lastGameToolStripMenuItem.AccessibleName = "Last Game unchecked.";
-                    playerreportToolStripMenuItem.Checked = true;
-                    playerreportToolStripMenuItem.AccessibleName = "Player Report checked.";                
-                    break;
+                case FILE_TYPE_FULL_LOG:
+                    return Form1.FullLogPath;
+                case FILE_TYPE_LAST_GAME:
+                    return Form1.LastGamePath;
+                case FILE_TYPE_PLAYER_REPORT:
+                    return Form1.PlayerReportPath;
                 default:
-                    throw new ArgumentException("Invalid file type");
+                    throw new ArgumentException($"Invalid file type: {fileType}", nameof(fileType));
             }
         }
 
-        public void GetReportFilePath(char fileType)  // Method to get report file path based on file type
+        private void LoadReport(char fileType)
         {
-            string filePath;
-            switch (fileType)  // Switch statement to determine file type
-            {
-                case 'F':  // Full Log
-                    filePath = Form1.FullLog;
-                    break;
-                case 'L':  // Last Game
-                    filePath = Form1.LastGame;
-                    break;
-                case 'P':  // Player Report
-                    filePath = Form1.PlayerReport;
-                    break;
-                default:
-                    throw new ArgumentException("Invalid file type");
-            }
-            SetControls(fileType);  // Update menu item states
+            string filePath = GetFilePath(fileType);
+            SetMenuCheckStates(fileType);
 
             try
             {
-                ReportRTB.Clear();  // Clear the RichTextBox before loading new content
-                using (StreamReader sr = new StreamReader(filePath))
+                ReportRTB.Clear();
+
+                if (File.Exists(filePath))
                 {
-                    ReportRTB.Text = sr.ReadToEnd();  // Read and display the content of the file
+                    ReportRTB.Text = File.ReadAllText(filePath);
+                }
+                else
+                {
+                    ReportRTB.Text = $"File not found: {Path.GetFileName(filePath)}";
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error reading file: " + ex.Message);
+                MessageBox.Show($"Error reading file: {ex.Message}", "File Read Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ReportRTB.Text = $"Error: {ex.Message}";
             }
         }
 
-        #region Menu Strip
+        #region Menu Event Handlers
         private void fullLogToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GetReportFilePath('F');
+            LoadReport(FILE_TYPE_FULL_LOG);
         }
 
         private void lastGameToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GetReportFilePath('L');
+            LoadReport(FILE_TYPE_LAST_GAME);
         }
 
         private void playerreportToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GetReportFilePath('P');
+            LoadReport(FILE_TYPE_PLAYER_REPORT);
         }
 
         private void readSelectedToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Form1.synth.SpeakAsyncCancelAll();
-            foreach (var line in ReportRTB.Text.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            try
             {
-                Form1.synth.SpeakAsync(line + ".");
+                Form1.CancelAllSpeech();
+
+                string[] lines = ReportRTB.Text.Split(
+                    new[] { Environment.NewLine },
+                    StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string line in lines)
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        string textToSpeak = line.TrimEnd();
+                        if (!textToSpeak.EndsWith(".") && !textToSpeak.EndsWith("!") && !textToSpeak.EndsWith("?"))
+                        {
+                            textToSpeak += ".";
+                        }
+
+                        Form1.SpeakText(textToSpeak);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error reading text: {ex.Message}", "Speech Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
         #endregion
     }
