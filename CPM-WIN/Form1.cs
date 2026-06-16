@@ -18,7 +18,7 @@ namespace CPM_WIN
         private const int DEFAULT_SPEECH_VOLUME = 100;
         private const int MAX_LEVEL = 7;
         private const int MIN_LEVEL = 1;
-        private const int AUTO_START_DELAY_MS = 120000; // 2 minutes
+        private const int AUTO_START_DELAY_MS = 60000; // 1 minute in milliseconds
         private const int AUTO_START_DELAY_MINUTES = AUTO_START_DELAY_MS / 60000;
         private const string FILE_LAST_GAME = "Last Game.txt";
         private const string FILE_FULL_LOG = "Full Log.txt";
@@ -373,10 +373,10 @@ namespace CPM_WIN
             _newGameStarted = true;
 
             ReadGameInfo();
-            SpeakAsync($"New game started, Game timer will automatically start in {AUTO_START_DELAY_MINUTES} minutes.");
+            SpeakAsync($"New game started, Game timer will automatically start in {AUTO_START_DELAY_MS / 60000} minutes.");
 
             _autoStartTimer.Stop();
-            _autoStartTimer.Start();
+            _autoSttrartTimer.Start();
         }
 
         public void SaveFullLog()
