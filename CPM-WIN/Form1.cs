@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Windows.Forms;
-using System.Linq;
-using System.Speech.Synthesis;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Speech.Synthesis;
+using System.Windows.Forms;
 
 namespace CPM_WIN
 {
@@ -24,9 +24,11 @@ namespace CPM_WIN
         private const string FILE_FULL_LOG = "Full Log.txt";
         private const string FILE_PLAYER_REPORT = "Player Report.txt";
         private const string FILE_LEVEL_PROGRESS = "Level Progress.txt";
+        private const string FILE_PLAYER_NAME = "Player Name.txt";
         #endregion
 
         #region Instance Variables
+        private int CurrentLevel = MIN_LEVEL;
         private readonly Timer _uiTimer;
         private readonly Timer _autoStartTimer;
         private readonly SpeechSynthesizer _synth;
@@ -37,6 +39,7 @@ namespace CPM_WIN
         private TimeSpan _nextSpeakTime = TimeSpan.FromMinutes(10);
         private TimeSpan _speakInterval = TimeSpan.FromMinutes(10);
         private bool _newGameStarted = false;
+        public static string HumanPlayerName = "You";
         #endregion
 
         #region Static Variables
@@ -48,6 +51,7 @@ namespace CPM_WIN
         public static string LastGamePath { get; private set; }
         public static string FullLogPath { get; private set; }
         public static string PlayerReportPath { get; private set; }
+        public static string PlayerNamePath { get; private set; } = string.Empty;
         
         // Temporary bridge for ReportViewer - consider refactoring to dependency injection
         private static Form1 _instance;
@@ -124,6 +128,7 @@ namespace CPM_WIN
             _autoStartTimer.Tick += AutoStartTimer_Tick;
 
             timerToolStripMenuItem.Enabled = false;
+            LoadPlayerName();
         }
 
         private void UiTimer_Tick(object sender, EventArgs e)
@@ -277,7 +282,7 @@ namespace CPM_WIN
                 using (var writer = new StreamWriter(LastGamePath, false))
                 {
                     writer.WriteLine($"          Date & Time:  {DateTimeTB.Text}");
-                    writer.WriteLine($"# of Computer Players:  {NUMCPUTB.Text}");
+                    writer.WriteLine($"# of Players:  {NumPlayersTB.Text}");
                     writer.WriteLine($"         Player Names:  {NamesTB.Text}");
                     writer.WriteLine($"            Game Rule:  {GameRuleTB.Text}");
                     writer.WriteLine($"         Elapsed Time:  {GameTimeTB.Text}");
@@ -297,12 +302,7 @@ namespace CPM_WIN
         {
             string levelFile = Path.Combine(AppDirectory, FILE_LEVEL_PROGRESS);
 
-            if (!int.TryParse(NUMCPUTB.Text, out int currentLevel))
-            {
-                currentLevel = MIN_LEVEL;
-            }
-
-            int nextLevel = currentLevel + 1;
+            int nextLevel = CurrentLevel + 1;
 
             try
             {
@@ -335,7 +335,7 @@ namespace CPM_WIN
                     if (int.TryParse(content, out int savedLevel) && 
                         savedLevel >= MIN_LEVEL && savedLevel <= MAX_LEVEL)
                     {
-                        NUMCPUTB.Text = savedLevel.ToString();
+                        CurrentLevel = savedLevel;
                         return savedLevel;
                     }
                 }
@@ -344,8 +344,6 @@ namespace CPM_WIN
             {
                 Debug.WriteLine($"LoadLevel failed: {ex.Message}");
             }
-
-            NUMCPUTB.Text = MIN_LEVEL.ToString();
             return MIN_LEVEL;
         }
 
@@ -354,13 +352,23 @@ namespace CPM_WIN
             Array.Clear(_chosen, 0, _chosen.Length);
             NamesTB.Text = string.Empty;
 
-            int savedLevel = LoadLevel();
             DateTimeTB.Text = $"{DateTime.Now.ToShortDateString()} {DateTime.Now.ToShortTimeString()}";
+            NumPlayersTB.Text = $"{CurrentLevel} Computer, {CurrentLevel + 1} Total";
 
-            int playersToPick = Math.Min(savedLevel, PlayerNames.Length);
-            for (int i = 0; i < playersToPick; i++)
+            int ComputerPlayersToPick = CurrentLevel;
+            int TotalPlayers = ComputerPlayersToPick + 1; // Computer players + 1 human player
+            int HumanPlayerIndex = _rng.Next(0, TotalPlayers);
+
+            for (int i = 0; i < TotalPlayers; i++)
             {
-                GetPlayer();
+                if (i == HumanPlayerIndex)
+                {
+                    NamesTB.Text += HumanPlayerName + " - ";
+                }
+                else
+                {
+                    GetPlayer();
+                }
             }
 
             NamesTB.Text = NamesTB.Text.TrimEnd(' ', '-');
@@ -373,10 +381,21 @@ namespace CPM_WIN
             _newGameStarted = true;
 
             ReadGameInfo();
-            SpeakAsync($"New game started, Game timer will automatically start in {AUTO_START_DELAY_MS / 60000} minutes.");
+            SpeakAsync($"New game started, Game timer will automatically start in {AUTO_START_DELAY_MINUTES} {WordChoice("minute", "minutes", AUTO_START_DELAY_MINUTES)}.");
 
-            _autoStartTimer.Stop();
-            _autoSttrartTimer.Start();
+            _autoStartTimer.Start();
+        }
+
+        private string WordChoice(string singular, string plural, int value)
+        {
+            if (value == 1)
+            {
+                return singular;
+            }
+            else
+            {
+                return plural;
+            }
         }
 
         public void SaveFullLog()
@@ -427,7 +446,7 @@ namespace CPM_WIN
 
                 using (var writer = new StreamWriter(PlayerReportPath, false))
                 {
-                    writer.WriteLine("NES CPM Player Report");
+                    writer.WriteLine($"NES CPM Player Report for {HumanPlayerName}");
                     writer.WriteLine(DateTime.Now.ToLongDateString());
                     writer.WriteLine();
                     writer.WriteLine();
@@ -528,6 +547,51 @@ namespace CPM_WIN
             }
         }
 
+        private void SavePlayerName()
+        {
+            try
+            {
+                EnsureDirectoryExists(AppDirectory);
+                using (var writer = new StreamWriter(Path.Combine(AppDirectory, FILE_PLAYER_NAME), false))
+                {
+                    writer.WriteLine(HumanPlayerName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SavePlayerName failed: {ex.Message}");
+            }
+        }
+        
+        private void LoadPlayerName()
+        {
+            string playerNamePath = Path.Combine(AppDirectory, FILE_PLAYER_NAME);
+
+            try
+            {
+                if (!File.Exists(playerNamePath))
+                {
+                    HumanPlayerName = "You";
+                    return;
+                }
+
+                using (var reader = new StreamReader(playerNamePath))
+                {
+                    HumanPlayerName = reader.ReadLine() ?? "You";
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LoadPlayerName failed: {ex.Message}");
+                HumanPlayerName = "You";
+            }
+        }
+
+        private void form1_shown(object sender, EventArgs e)
+        {
+            AssetsNUD.Focus();
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
@@ -536,6 +600,7 @@ namespace CPM_WIN
             {
                 _uiTimer?.Stop();
                 _autoStartTimer?.Stop();
+                SavePlayerName();
 
                 lock (_synthLock)
                 {
@@ -598,7 +663,7 @@ namespace CPM_WIN
 
             Speak("Reading game information.");
             Speak($"Date & Time:  {DateTimeTB.Text}");
-            Speak($"Number of Computer Players:  {NUMCPUTB.Text}");
+            Speak($"Number of Players:  {NumPlayersTB.Text}");
             Speak($"Player names:  {NamesTB.Text}");
             Speak($"Game rule:  {GameRuleTB.Text}");
         }
@@ -667,5 +732,13 @@ namespace CPM_WIN
             Speak($"The game timer is currently {status}, and the elapsed time is {_gameTimer.Elapsed:hh\\:mm\\:ss}.");
         }
         #endregion
+
+        private void editHumanNameToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var playerNameForm = new PlayerName())
+            {
+                playerNameForm.ShowDialog();
+            }
+        }
     }
 }
