@@ -44,6 +44,7 @@
             // 
             // OkBTN
             // 
+            this.OkBTN.DialogResult = System.Windows.Forms.DialogResult.Cancel;
             this.OkBTN.ForeColor = System.Drawing.Color.Black;
             this.OkBTN.Location = new System.Drawing.Point(261, 141);
             this.OkBTN.Name = "OkBTN";
@@ -55,6 +56,7 @@
             // 
             // CancelBTN
             // 
+            this.CancelBTN.DialogResult = System.Windows.Forms.DialogResult.Cancel;
             this.CancelBTN.ForeColor = System.Drawing.Color.Black;
             this.CancelBTN.Location = new System.Drawing.Point(21, 141);
             this.CancelBTN.Name = "CancelBTN";
@@ -75,9 +77,11 @@
             // 
             // PlayerName
             // 
+            this.AcceptButton = this.OkBTN;
             this.AutoScaleDimensions = new System.Drawing.SizeF(15F, 29F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.DarkGreen;
+            this.CancelButton = this.CancelBTN;
             this.ClientSize = new System.Drawing.Size(413, 201);
             this.Controls.Add(this.HumanNameLBL);
             this.Controls.Add(this.CancelBTN);

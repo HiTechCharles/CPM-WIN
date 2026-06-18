@@ -59,7 +59,7 @@
             // DateTimeLBL
             // 
             this.DateTimeLBL.AutoSize = true;
-            this.DateTimeLBL.Location = new System.Drawing.Point(75, 66);
+            this.DateTimeLBL.Location = new System.Drawing.Point(72, 66);
             this.DateTimeLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.DateTimeLBL.Name = "DateTimeLBL";
             this.DateTimeLBL.Size = new System.Drawing.Size(170, 29);
@@ -109,7 +109,7 @@
             // 
             this.NamesLBL.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.NamesLBL.AutoSize = true;
-            this.NamesLBL.Location = new System.Drawing.Point(59, 249);
+            this.NamesLBL.Location = new System.Drawing.Point(56, 249);
             this.NamesLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.NamesLBL.Name = "NamesLBL";
             this.NamesLBL.Size = new System.Drawing.Size(186, 29);
@@ -131,7 +131,7 @@
             // 
             this.GameRuleLBL.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.GameRuleLBL.AutoSize = true;
-            this.GameRuleLBL.Location = new System.Drawing.Point(94, 359);
+            this.GameRuleLBL.Location = new System.Drawing.Point(91, 359);
             this.GameRuleLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.GameRuleLBL.Name = "GameRuleLBL";
             this.GameRuleLBL.Size = new System.Drawing.Size(151, 29);
@@ -152,7 +152,7 @@
             // 
             this.GameTimeLBL.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.GameTimeLBL.AutoSize = true;
-            this.GameTimeLBL.Location = new System.Drawing.Point(65, 433);
+            this.GameTimeLBL.Location = new System.Drawing.Point(62, 433);
             this.GameTimeLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.GameTimeLBL.Name = "GameTimeLBL";
             this.GameTimeLBL.Size = new System.Drawing.Size(180, 29);
@@ -163,7 +163,7 @@
             // 
             this.AssetsLBL.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
             this.AssetsLBL.AutoSize = true;
-            this.AssetsLBL.Location = new System.Drawing.Point(79, 513);
+            this.AssetsLBL.Location = new System.Drawing.Point(76, 513);
             this.AssetsLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.AssetsLBL.Name = "AssetsLBL";
             this.AssetsLBL.Size = new System.Drawing.Size(166, 29);

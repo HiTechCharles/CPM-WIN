@@ -39,7 +39,7 @@ namespace CPM_WIN
         private TimeSpan _nextSpeakTime = TimeSpan.FromMinutes(10);
         private TimeSpan _speakInterval = TimeSpan.FromMinutes(10);
         private bool _newGameStarted = false;
-        public static string HumanPlayerName = "You";
+        public static string HumanPlayerName;
         #endregion
 
         #region Static Variables
@@ -349,7 +349,14 @@ namespace CPM_WIN
 
         public void NewGame()
         {
-            Array.Clear(_chosen, 0, _chosen.Length);
+            if (HumanPlayerName.Length < 3)
+            {
+                MessageBox.Show("Please type in your name by clicking Edit Human Name in the menu.  Name must be at least 3 characters.\n\nYour name will be saved for future games.",  
+                    "Invalid Name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+        
+        Array.Clear(_chosen, 0, _chosen.Length);
             NamesTB.Text = string.Empty;
 
             DateTimeTB.Text = $"{DateTime.Now.ToShortDateString()} {DateTime.Now.ToShortTimeString()}";
@@ -571,19 +578,19 @@ namespace CPM_WIN
             {
                 if (!File.Exists(playerNamePath))
                 {
-                    HumanPlayerName = "You";
+                    HumanPlayerName = "";
                     return;
                 }
 
                 using (var reader = new StreamReader(playerNamePath))
                 {
-                    HumanPlayerName = reader.ReadLine() ?? "You";
+                    HumanPlayerName = reader.ReadLine() ?? "";
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"LoadPlayerName failed: {ex.Message}");
-                HumanPlayerName = "You";
+                HumanPlayerName = "";
             }
         }
 
