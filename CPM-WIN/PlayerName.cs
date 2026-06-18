@@ -12,7 +12,15 @@ namespace CPM_WIN
 
         private void OkBTN_Click(object sender, EventArgs e)
         {
-            Form1.HumanPlayerName = PlayerNameTB.Text;
+            if (string.IsNullOrWhiteSpace(PlayerNameTB.Text))
+            {
+                MessageBox.Show("Please enter a player name.", "Name Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                PlayerNameTB.Focus();
+                return;
+            }
+
+            Form1.HumanPlayerName = PlayerNameTB.Text.Trim();
             Close();
         }
 

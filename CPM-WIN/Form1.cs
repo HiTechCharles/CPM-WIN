@@ -725,6 +725,7 @@ namespace CPM_WIN
                 return;
             }
 
+            LoadLevel();
             NewGame();
         }
 

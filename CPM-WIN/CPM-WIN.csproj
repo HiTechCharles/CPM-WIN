@@ -24,7 +24,7 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>9</ApplicationRevision>
+    <ApplicationRevision>11</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -162,7 +162,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PreBuildEvent>if exist "$(ProjectDir)bin\Debug\app.publish\" rd /s /q "$(ProjectDir)bin\Debug\app.publish\"</PreBuildEvent>
-  </PropertyGroup>
+  <!-- Custom clean target to remove bin and obj directories -->
+  <Target Name="BeforeClean">
+    <RemoveDir Directories="$(ProjectDir)bin;$(ProjectDir)obj" ContinueOnError="true" />
+  </Target>
 </Project>

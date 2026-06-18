@@ -11,7 +11,12 @@ CPM-WIN (Computer Player Monopoly - Windows) is a companion tool designed for NE
 ### 🎲 Random Challenge Generation
 - **Random Opponent Selection**: Automatically selects computer opponents from the 8 NES Monopoly characters (Arthur, Gertrude, Erwin, Maude, Carmen, Isaac, Penelope, Ollie)
 - **Custom Game Rules**: Generates random gameplay variants and special rules to increase difficulty
-- **Level Progression System**: Tracks and manages difficulty levels (1-7) based on your performance
+- **Level Progression System**: 
+  - Progress through 7 difficulty levels based on your wins
+  - Level number = number of computer players (Level 1 = 1 computer + you, Level 7 = 7 computers + you)
+  - Win a game to advance to the next level
+  - Progress automatically saves and loads between sessions
+  - Lose a game or complete Level 7 to reset to Level 1
 
 ### 📊 Performance Tracking
 - Maintains detailed game logs with timestamps and results
@@ -61,14 +66,25 @@ CPM-WIN (Computer Player Monopoly - Windows) is a companion tool designed for NE
 
 ## Usage
 
-### Starting a New Challenge
+### First Time Setup
+
+**Before starting your first game, you must set your player name:**
 
 1. Launch CPM-WIN
-2. Click "New Game" to generate a new challenge setup
-3. The application will display:
-   - Randomly selected opponents
+2. Go to the menu and select "Edit Human Name"
+3. Enter your name and click OK
+4. Your name is automatically saved for all future games
+
+### Starting a New Challenge
+
+1. Click "New Game" to generate a new challenge setup
+   - The app automatically loads your saved level progress
+   - Level determines the number of computer opponents you'll face
+2. The application will display:
+   - Number of players (computer + you)
+   - Randomly selected opponents (your name appears in a random position)
    - A special game rule or variant
-4. Start your NES Monopoly game with the generated parameters
+3. Start your NES Monopoly game with the generated parameters
 
 ### Using the Timer
 
@@ -78,9 +94,14 @@ CPM-WIN (Computer Player Monopoly - Windows) is a companion tool designed for NE
 
 ### Logging Results
 
-- Use the "Win" or "Loss" buttons to record your game result
+- Enter your total assets in the Assets field when the game ends
+- Close the application or start a new game to save results
 - Results are automatically saved to log files
-- Level progression adjusts based on your performance
+- **Level Progression**:
+  - Win (positive assets): Advance to the next level
+  - Loss (zero or negative assets): Reset to Level 1
+  - Complete Level 7: Reset to Level 1 to start over
+  - Your progress is saved in `Level Progress.txt` and loads automatically
 
 ### Viewing Reports
 
@@ -94,6 +115,7 @@ CPM-WIN (Computer Player Monopoly - Windows) is a companion tool designed for NE
 The application stores data in your Documents folder:
 - **Location**: `Documents\CPM\`
 - **Files**:
+  - `Player Name.txt` - Your saved player name (required for new games)
   - `Last Game.txt` - Most recent game details
   - `Full Log.txt` - Complete game history
   - `Player Report.txt` - Statistical summary

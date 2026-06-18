@@ -59,7 +59,7 @@
             // DateTimeLBL
             // 
             this.DateTimeLBL.AutoSize = true;
-            this.DateTimeLBL.Location = new System.Drawing.Point(72, 66);
+            this.DateTimeLBL.Location = new System.Drawing.Point(72, 62);
             this.DateTimeLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.DateTimeLBL.Name = "DateTimeLBL";
             this.DateTimeLBL.Size = new System.Drawing.Size(170, 29);
