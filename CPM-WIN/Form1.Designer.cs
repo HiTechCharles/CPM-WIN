@@ -41,8 +41,10 @@
             this.AssetsLBL = new System.Windows.Forms.Label();
             this.AssetsNUD = new System.Windows.Forms.NumericUpDown();
             this.MainMenuMST = new System.Windows.Forms.MenuStrip();
+            this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.emulatorPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.humanNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.editHumanNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.readToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewRecordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -52,6 +54,7 @@
             this.speakToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stoPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.textToSpeechToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.AssetsNUD)).BeginInit();
             this.MainMenuMST.SuspendLayout();
             this.SuspendLayout();
@@ -172,6 +175,11 @@
             // 
             // AssetsNUD
             // 
+            this.AssetsNUD.Increment = new decimal(new int[] {
+            500,
+            0,
+            0,
+            0});
             this.AssetsNUD.Location = new System.Drawing.Point(291, 511);
             this.AssetsNUD.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.AssetsNUD.Maximum = new decimal(new int[] {
@@ -189,6 +197,7 @@
             this.MainMenuMST.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.MainMenuMST.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.optionsToolStripMenuItem,
+            this.editToolStripMenuItem,
             this.timerToolStripMenuItem});
             this.MainMenuMST.Location = new System.Drawing.Point(0, 0);
             this.MainMenuMST.Name = "MainMenuMST";
@@ -197,31 +206,46 @@
             this.MainMenuMST.TabIndex = 0;
             this.MainMenuMST.Text = "menuStrip1";
             // 
+            // editToolStripMenuItem
+            // 
+            this.editToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.emulatorPathToolStripMenuItem,
+            this.humanNameToolStripMenuItem,
+            this.textToSpeechToolStripMenuItem});
+            this.editToolStripMenuItem.Name = "editToolStripMenuItem";
+            this.editToolStripMenuItem.Size = new System.Drawing.Size(117, 33);
+            this.editToolStripMenuItem.Text = "&Options";
+            // 
+            // emulatorPathToolStripMenuItem
+            // 
+            this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
+            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.emulatorPathToolStripMenuItem.Text = "E&mulator Path...";
+            this.emulatorPathToolStripMenuItem.Click += new System.EventHandler(this.emulatorPathToolStripMenuItem_Click);
+            // 
+            // humanNameToolStripMenuItem
+            // 
+            this.humanNameToolStripMenuItem.Name = "humanNameToolStripMenuItem";
+            this.humanNameToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.humanNameToolStripMenuItem.Text = "&Human Name...";
+            this.humanNameToolStripMenuItem.Click += new System.EventHandler(this.humanNameToolStripMenuItem_Click);
+            // 
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.editHumanNameToolStripMenuItem,
             this.newGameToolStripMenuItem,
             this.readToolStripMenuItem,
             this.viewRecordsToolStripMenuItem,
             this.saveExitToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(117, 33);
-            this.optionsToolStripMenuItem.Text = "&Options";
-            // 
-            // editHumanNameToolStripMenuItem
-            // 
-            this.editHumanNameToolStripMenuItem.Name = "editHumanNameToolStripMenuItem";
-            this.editHumanNameToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
-            this.editHumanNameToolStripMenuItem.Size = new System.Drawing.Size(425, 34);
-            this.editHumanNameToolStripMenuItem.Text = "Edit Human Name....";
-            this.editHumanNameToolStripMenuItem.Click += new System.EventHandler(this.editHumanNameToolStripMenuItem_Click);
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(94, 33);
+            this.optionsToolStripMenuItem.Text = "&Game";
             // 
             // newGameToolStripMenuItem
             // 
             this.newGameToolStripMenuItem.Name = "newGameToolStripMenuItem";
             this.newGameToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-            this.newGameToolStripMenuItem.Size = new System.Drawing.Size(425, 34);
+            this.newGameToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
             this.newGameToolStripMenuItem.Text = "&New Game";
             this.newGameToolStripMenuItem.Click += new System.EventHandler(this.newGameToolStripMenuItem_Click);
             // 
@@ -229,7 +253,7 @@
             // 
             this.readToolStripMenuItem.Name = "readToolStripMenuItem";
             this.readToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.D)));
-            this.readToolStripMenuItem.Size = new System.Drawing.Size(425, 34);
+            this.readToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
             this.readToolStripMenuItem.Text = "&Read";
             this.readToolStripMenuItem.Click += new System.EventHandler(this.readToolStripMenuItem_Click);
             // 
@@ -237,7 +261,7 @@
             // 
             this.viewRecordsToolStripMenuItem.Name = "viewRecordsToolStripMenuItem";
             this.viewRecordsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.V)));
-            this.viewRecordsToolStripMenuItem.Size = new System.Drawing.Size(425, 34);
+            this.viewRecordsToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
             this.viewRecordsToolStripMenuItem.Text = "Report &Viewer";
             this.viewRecordsToolStripMenuItem.Click += new System.EventHandler(this.viewRecordsToolStripMenuItem_Click);
             // 
@@ -245,7 +269,7 @@
             // 
             this.saveExitToolStripMenuItem.Name = "saveExitToolStripMenuItem";
             this.saveExitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
-            this.saveExitToolStripMenuItem.Size = new System.Drawing.Size(425, 34);
+            this.saveExitToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
             this.saveExitToolStripMenuItem.Text = "&Save && Exit";
             this.saveExitToolStripMenuItem.Click += new System.EventHandler(this.saveExitToolStripMenuItem_Click);
             // 
@@ -291,6 +315,13 @@
             this.stoPToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
             this.stoPToolStripMenuItem.Text = "St&op";
             this.stoPToolStripMenuItem.Click += new System.EventHandler(this.stoPToolStripMenuItem_Click);
+            // 
+            // textToSpeechToolStripMenuItem
+            // 
+            this.textToSpeechToolStripMenuItem.Name = "textToSpeechToolStripMenuItem";
+            this.textToSpeechToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.textToSpeechToolStripMenuItem.Text = "&Text to Speech";
+            this.textToSpeechToolStripMenuItem.Click += new System.EventHandler(this.textToSpeechToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -351,7 +382,10 @@
         private System.Windows.Forms.ToolStripMenuItem viewRecordsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem newGameToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem speakToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem editHumanNameToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem humanNameToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem emulatorPathToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem textToSpeechToolStripMenuItem;
     }
 }
 

@@ -1,751 +1,587 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Speech.Synthesis;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CPM_WIN
 {
+    /// <summary>
+    /// Main application form for the CPM (Classic Monopoly) game timer and manager.
+    /// </summary>
     public partial class Form1 : Form
     {
         #region Constants
-        private const int UI_TIMER_INTERVAL_MS = 200;
-        private const int MAX_PLAYER_SELECTION_ATTEMPTS = 100;
-        private const int DEFAULT_SPEECH_RATE = 3;
-        private const int DEFAULT_SPEECH_VOLUME = 100;
-        private const int MAX_LEVEL = 7;
-        private const int MIN_LEVEL = 1;
-        private const int AUTO_START_DELAY_MS = 60000; // 1 minute in milliseconds
-        private const int AUTO_START_DELAY_MINUTES = AUTO_START_DELAY_MS / 60000;
-        private const string FILE_LAST_GAME = "Last Game.txt";
-        private const string FILE_FULL_LOG = "Full Log.txt";
-        private const string FILE_PLAYER_REPORT = "Player Report.txt";
-        private const string FILE_LEVEL_PROGRESS = "Level Progress.txt";
-        private const string FILE_PLAYER_NAME = "Player Name.txt";
+        private const int MIN_PLAYER_NAME_LENGTH = 3;
+        private const string INVALID_NAME_MESSAGE = "Please type in your name by clicking Edit Human Name in the menu.  Name must be at least 3 characters.\n\nYour name will be saved for future games.";
+        private const string INVALID_NAME_TITLE = "Invalid Name";
+        private const string EMPTY_FIELD = "";
+        private const string GAME_ALREADY_IN_PROGRESS = "A game is already in progress.";
+        private const string NEW_GAME_MESSAGE_FORMAT = "New game started, Game timer will automatically start in {0} {1}.";
+        private const string GAME_TIMER_ALREADY_RUNNING = "Game timer is already running.";
+        private const string GAME_TIMER_STARTED = "Game timer started.";
+        private const string GAME_TIMER_ALREADY_STOPPED = "Game timer is already stopped.";
+        private const string GAME_TIMER_STOPPED = "Game timer stopped.";
+        private const string GAME_TIMER_RESET = "Game timer has been reset.";
+        private const string HUMAN_NAME_SET_FORMAT = "Human player name set to {0}";
+        private const string EMULATOR_PATH_SET_FORMAT = "Emulator path set to {0}";
+        private const string TEXT_TO_SPEECH_ENABLED = "Text to speech enabled.";
+        private const string TEXT_TO_SPEECH_DISABLED = "Text to speech disabled.";
+        private const string READING_GAME_INFORMATION = "Reading game information.";
+        private const string DATE_TIME_FORMAT = "Date & Time:  {0}";
+        private const string NUM_PLAYERS_FORMAT = "Number of Players:  {0}";
+        private const string PLAYER_NAMES_FORMAT = "Player names:  {0}";
+        private const string GAME_RULE_FORMAT = "Game rule:  {0}";
+        private const string TIMER_STATUS_FORMAT = "The game timer is currently {0}, and the elapsed time is {1:hh\\:mm\\:ss}.";
+        private const string TIMER_STATUS_RUNNING = "running";
+        private const string TIMER_STATUS_STOPPED = "stopped";
+        private const string SAVE_ERROR_TITLE = "Save Error";
+        private const string EXECUTABLE_FILTER = "Executable Files (*.exe)|*.exe";
         #endregion
 
-        #region Instance Variables
-        private int CurrentLevel = MIN_LEVEL;
-        private readonly Timer _uiTimer;
-        private readonly Timer _autoStartTimer;
-        private readonly SpeechSynthesizer _synth;
-        private readonly object _synthLock = new object();
-        private readonly Stopwatch _gameTimer = new Stopwatch();
-        private readonly Random _rng = new Random();
-        private bool[] _chosen = new bool[8];
-        private TimeSpan _nextSpeakTime = TimeSpan.FromMinutes(10);
-        private TimeSpan _speakInterval = TimeSpan.FromMinutes(10);
-        private bool _newGameStarted = false;
-        public static string HumanPlayerName;
-        #endregion
+        #region Fields
+        private readonly TimerManager _timerManager;
+        private readonly LoggingManager _loggingManager;
+        private readonly SpeechManager _speechManager;
+        private readonly GameManager _gameManager;
+        private readonly PlayerSelector _playerSelector;
 
-        #region Static Variables
-        private static readonly string[] PlayerNames = 
-        { 
-            "Arthur", "Gertrude", "Erwin", "Maude", "Carmen", "Isaac", "Penelope", "Ollie" 
-        };
-        public static string AppDirectory { get; private set; }
-        public static string LastGamePath { get; private set; }
-        public static string FullLogPath { get; private set; }
-        public static string PlayerReportPath { get; private set; }
-        public static string PlayerNamePath { get; private set; } = string.Empty;
-        
-        // Temporary bridge for ReportViewer - consider refactoring to dependency injection
         private static Form1 _instance;
         #endregion
 
-        static Form1()
-        {
-            AppDirectory = InitializeAppDirectory();
-            LastGamePath = Path.Combine(AppDirectory, FILE_LAST_GAME);
-            FullLogPath = Path.Combine(AppDirectory, FILE_FULL_LOG);
-            PlayerReportPath = Path.Combine(AppDirectory, FILE_PLAYER_REPORT);
-        }
+        #region Properties
+        /// <summary>
+        /// Gets or sets the human player's name.
+        /// </summary>
+        public static string HumanPlayerName { get; private set; }
 
-        private static string InitializeAppDirectory()
-        {
-            var oneDriveDocs = Environment.GetEnvironmentVariable("onedriveconsumer");
-            string documentsRoot;
+        // Static properties for backward compatibility with ReportViewer
+        /// <summary>
+        /// Gets the application directory path (for backward compatibility).
+        /// </summary>
+        public static string AppDirectory => _instance?._loggingManager.AppDirectory;
 
-            if (!string.IsNullOrWhiteSpace(oneDriveDocs))
-            {
-                try
-                {
-                    var oneDriveDocsPath = Path.Combine(oneDriveDocs, "documents");
-                    documentsRoot = Directory.Exists(oneDriveDocsPath)
-                        ? oneDriveDocsPath
-                        : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                }
-                catch
-                {
-                    documentsRoot = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                }
-            }
-            else
-            {
-                documentsRoot = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            }
+        /// <summary>
+        /// Gets the last game file path (for backward compatibility).
+        /// </summary>
+        public static string LastGamePath => _instance?._loggingManager.LastGamePath;
 
-            string appDir = Path.Combine(documentsRoot, "CPM");
+        /// <summary>
+        /// Gets the full log file path (for backward compatibility).
+        /// </summary>
+        public static string FullLogPath => _instance?._loggingManager.FullLogPath;
 
-            try
-            {
-                if (!Directory.Exists(appDir))
-                    Directory.CreateDirectory(appDir);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to ensure AppDirectory: {ex.Message}");
-            }
+        /// <summary>
+        /// Gets the player report file path (for backward compatibility).
+        /// </summary>
+        public static string PlayerReportPath => _instance?._loggingManager.PlayerReportPath;
 
-            return appDir;
-        }
+        /// <summary>
+        /// Gets the player name file path (for backward compatibility).
+        /// </summary>
+        public static string PlayerNamePath => _instance?._loggingManager.PlayerNamePath;
+        #endregion
 
+        /// <summary>
+        /// Initializes a new instance of the Form1 class.
+        /// </summary>
         public Form1()
         {
             InitializeComponent();
             _instance = this;
 
-            _synth = new SpeechSynthesizer();
-            try
+            // Initialize managers (must be in constructor due to readonly fields)
+            _loggingManager = new LoggingManager();
+            _speechManager = new SpeechManager();
+            _gameManager = new GameManager();
+            _playerSelector = new PlayerSelector();
+            _timerManager = new TimerManager();
+
+            WireUpEventHandlers();
+            InitializeMenuState();
+            InitializeFocus();
+        }
+
+        /// <summary>
+        /// Wires up event handlers for manager objects.
+        /// </summary>
+        private void WireUpEventHandlers()
+        {
+            _timerManager.OnTimerTick += TimerManager_OnTimerTick;
+            _timerManager.OnSpeakScheduled += TimerManager_OnSpeakScheduled;
+            _timerManager.OnAutoStartTick += TimerManager_OnAutoStartTick;
+        }
+
+        /// <summary>
+        /// Handles the timer tick event to update the UI.
+        /// </summary>
+        private void TimerManager_OnTimerTick(object sender, TimeSpan elapsed)
+        {
+            GameTimeTB.Text = _timerManager.GetFormattedTime();
+        }
+
+        /// <summary>
+        /// Handles the speak scheduled event to speak elapsed time.
+        /// </summary>
+        private void TimerManager_OnSpeakScheduled(object sender, TimeSpan elapsed)
+        {
+            if (_loggingManager.LoadTextToSpeech() && _speechManager.State != System.Speech.Synthesis.SynthesizerState.Speaking)
             {
-                _synth.Rate = DEFAULT_SPEECH_RATE;
-                _synth.Volume = DEFAULT_SPEECH_VOLUME;
+                _speechManager.SpeakElapsedTime(elapsed);
             }
-            catch (Exception ex)
+        }
+
+        /// <summary>
+        /// Handles the auto-start timer event.
+        /// </summary>
+        private void TimerManager_OnAutoStartTick(object sender, EventArgs e)
+        {
+            if (!_timerManager.IsRunning)
             {
-                Debug.WriteLine($"Speech initialization failed: {ex.Message}");
+                _timerManager.Start();
+                MaybeSpeakAsync("Game timer has started.");
             }
+        }
 
-            _uiTimer = new Timer { Interval = UI_TIMER_INTERVAL_MS };
-            _uiTimer.Tick += UiTimer_Tick;
-            _uiTimer.Start();
-
-            _autoStartTimer = new Timer { Interval = AUTO_START_DELAY_MS };
-            _autoStartTimer.Tick += AutoStartTimer_Tick;
-
+        /// <summary>
+        /// Initializes the menu state.
+        /// </summary>
+        private void InitializeMenuState()
+        {
             timerToolStripMenuItem.Enabled = false;
-            LoadPlayerName();
-        }
-
-        private void UiTimer_Tick(object sender, EventArgs e)
-        {
-            var elapsed = _gameTimer.Elapsed;
-            GameTimeTB.Text = elapsed.TotalHours >= 1 
-                ? elapsed.ToString(@"h\:mm\:ss") 
-                : elapsed.ToString(@"mm\:ss");
-
-            if (_gameTimer.IsRunning)
-            {
-                TryScheduleSpeak(elapsed);
-            }
-        }
-
-        private void AutoStartTimer_Tick(object sender, EventArgs e)
-        {
-            _autoStartTimer.Stop();
-
-            if (!_gameTimer.IsRunning)
-            {
-                _gameTimer.Start();
-                SpeakAsync("Game timer has started.");
-            }
-        }
-
-        private void TryScheduleSpeak(TimeSpan elapsed)
-        {
-            if (elapsed < _nextSpeakTime)
-                return;
-
-            int intervalMinutes = Math.Max(1, (int)_speakInterval.TotalMinutes);
-            int multiplier = (int)elapsed.TotalMinutes / intervalMinutes;
-            var computedNext = TimeSpan.FromMinutes((multiplier + 1) * intervalMinutes);
-
-            lock (_synthLock)
-            {
-                try
-                {
-                    if (_synth.State == SynthesizerState.Speaking)
-                    {
-                        _nextSpeakTime = computedNext;
-                        return;
-                    }
-
-                    SpeakElapsedInternal(elapsed);
-                    _nextSpeakTime = computedNext;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"TryScheduleSpeak failed: {ex.Message}");
-                }
-            }
-        }
-
-        private void SpeakElapsedInternal(TimeSpan ts)
-        {
-            int hours = (int)ts.TotalHours;
-            int minutes = ts.Minutes;
-            int seconds = ts.Seconds;
-
-            string phrase;
-            if (hours > 0)
-            {
-                phrase = $"Elapsed time: {hours} hour{Pluralize(hours)} {minutes} minute{Pluralize(minutes)}.";
-            }
-            else if (minutes > 0)
-            {
-                phrase = $"Elapsed time: {minutes} minute{Pluralize(minutes)} {seconds} second{Pluralize(seconds)}.";
-            }
-            else
-            {
-                phrase = $"Elapsed time: {seconds} second{Pluralize(seconds)}.";
-            }
-
+            HumanPlayerName = _loggingManager.LoadPlayerName();
             try
             {
-                _synth?.SpeakAsync(phrase);
+                textToSpeechToolStripMenuItem.Checked = _loggingManager.LoadTextToSpeech();
+            }
+            catch
+            {
+                // Suppress initialization errors
+            }
+        }
+
+        /// <summary>
+        /// Runs the emulator if the path is set.
+        /// </summary>
+        private void RunEmulator()
+        {
+            try
+            {
+                string emulatorPath = _loggingManager.LoadEmulatorPath();
+                if (!string.IsNullOrEmpty(emulatorPath))
+                {
+                    System.Diagnostics.Process.Start(emulatorPath);
+                }
+                else
+                {
+                    MessageBox.Show("Emulator path is not set. Please set it in the menu.", "Emulator Path Not Set", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SpeakElapsedInternal failed: {ex.Message}");
+                MessageBox.Show($"Failed to start emulator: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        private static string Pluralize(int count)
+        
+        /// <summary>
+        /// Initializes the focus to the Assets input field.
+        /// </summary>
+        private void InitializeFocus()
         {
-            return count != 1 ? "s" : "";
+            this.Shown += (s, e) => AssetsNUD.Focus();
         }
 
-        private void SpeakAsync(string text)
+        /// <summary>
+        /// Starts a new game with the current settings.
+        /// </summary>
+        public async void NewGame()
         {
-            lock (_synthLock)
+            if (!IsValidPlayerName())
             {
-                try
-                {
-                    _synth?.SpeakAsync(text);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"SpeakAsync failed: {ex.Message}");
-                }
+                MessageBox.Show(INVALID_NAME_MESSAGE, INVALID_NAME_TITLE, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
+
+            InitializeGameUI();
+            PrepareGameState();
+            await ReadGameInfo();
+            await AnnounceGameStart();
+            _timerManager.StartAutoStartTimer();
+            RunEmulator();
         }
 
-        private void Speak(string text)
+        /// <summary>
+        /// Checks if the player name is valid.
+        /// </summary>
+        /// <returns>True if the player name is valid; otherwise false.</returns>
+        private bool IsValidPlayerName()
         {
-            lock (_synthLock)
-            {
-                try
-                {
-                    _synth?.Speak(text);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Speak failed: {ex.Message}");
-                }
-            }
+            return !string.IsNullOrEmpty(HumanPlayerName) && HumanPlayerName.Length >= MIN_PLAYER_NAME_LENGTH;
         }
 
-        // Public method for external speech requests (e.g., from ReportViewer)
-        public static void SpeakText(string text)
+        /// <summary>
+        /// Initializes the game UI with current game information.
+        /// </summary>
+        private void InitializeGameUI()
         {
-            _instance?.SpeakAsync(text);
+            DateTimeTB.Text = $"{DateTime.Now.ToShortDateString()} {DateTime.Now.ToShortTimeString()}";
+            NumPlayersTB.Text = _gameManager.GetNumPlayersText();
+            NamesTB.Text = _playerSelector.GeneratePlayerList(_gameManager.CurrentLevel, HumanPlayerName);
+            GameRuleTB.Text = _gameManager.GetRandomGameRule();
         }
 
-        public static void CancelAllSpeech()
+        /// <summary>
+        /// Prepares the game state for a new game.
+        /// </summary>
+        private void PrepareGameState()
         {
-            if (_instance?._synth != null)
-            {
-                lock (_instance._synthLock)
-                {
-                    try
-                    {
-                        _instance._synth.SpeakAsyncCancelAll();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"CancelAllSpeech failed: {ex.Message}");
-                    }
-                }
-            }
+            _loggingManager.DeleteLastGame();
+            timerToolStripMenuItem.Enabled = true;
+            _timerManager.Reset();
+            _gameManager.StartNewGame();
         }
 
+        /// <summary>
+        /// Announces the start of a new game.
+        /// </summary>
+        private Task AnnounceGameStart()
+        {
+            string minuteWord = WordChoice("minute", "minutes", TimerManager.AUTO_START_DELAY_MINUTES);
+            string message = string.Format(NEW_GAME_MESSAGE_FORMAT, TimerManager.AUTO_START_DELAY_MINUTES, minuteWord);
+            MaybeSpeak(message);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Returns the singular or plural form of a word based on a count.
+        /// </summary>
+        /// <param name="singular">The singular form.</param>
+        /// <param name="plural">The plural form.</param>
+        /// <param name="value">The count value.</param>
+        /// <returns>The singular form if value is 1; otherwise the plural form.</returns>
+        private string WordChoice(string singular, string plural, int value)
+        {
+            return value == 1 ? singular : plural;
+        }
+
+        /// <summary>
+        /// Saves the current game information to file.
+        /// </summary>
         public void SaveLastGame()
         {
             try
             {
-                EnsureDirectoryExists(AppDirectory);
-
-                using (var writer = new StreamWriter(LastGamePath, false))
-                {
-                    writer.WriteLine($"          Date & Time:  {DateTimeTB.Text}");
-                    writer.WriteLine($"# of Players:  {NumPlayersTB.Text}");
-                    writer.WriteLine($"         Player Names:  {NamesTB.Text}");
-                    writer.WriteLine($"            Game Rule:  {GameRuleTB.Text}");
-                    writer.WriteLine($"         Elapsed Time:  {GameTimeTB.Text}");
-                    writer.WriteLine($"         Total Assets:  {AssetsNUD.Value.ToString("C", CultureInfo.CurrentCulture)}");
-                    writer.WriteLine($"               Result:  {(AssetsNUD.Value > 0 ? "Win" : "Loss")}");
-                    writer.WriteLine("\n--------------------------------------------------");
-                }
+                _loggingManager.SaveLastGame(
+                    DateTimeTB.Text,
+                    NumPlayersTB.Text,
+                    NamesTB.Text,
+                    GameRuleTB.Text,
+                    GameTimeTB.Text,
+                    AssetsNUD.Value
+                );
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving game: {ex.Message}", "Save Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, SAVE_ERROR_TITLE, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        public void SaveLevel()
+        /// <summary>
+        /// Speaks text if text-to-speech is enabled.
+        /// </summary>
+        /// <param name="text">The text to speak.</param>
+        public static void SpeakText(string text)
         {
-            string levelFile = Path.Combine(AppDirectory, FILE_LEVEL_PROGRESS);
-
-            int nextLevel = CurrentLevel + 1;
-
-            try
+            if (_instance != null && _instance._loggingManager.LoadTextToSpeech())
             {
-                if (nextLevel > MAX_LEVEL || AssetsNUD.Value <= 0)
-                {
-                    DeleteFileIfExists(levelFile);
-                    return;
-                }
-
-                if (AssetsNUD.Value > 0)
-                {
-                    File.WriteAllText(levelFile, nextLevel.ToString());
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"SaveLevel failed: {ex.Message}");
+                _instance._speechManager.SpeakAsync(text);
             }
         }
 
-        public int LoadLevel()
+        /// <summary>
+        /// Cancels all pending speech operations.
+        /// </summary>
+        public static void CancelAllSpeech()
         {
-            string levelFile = Path.Combine(AppDirectory, FILE_LEVEL_PROGRESS);
-
-            try
-            {
-                if (File.Exists(levelFile))
-                {
-                    string content = File.ReadAllText(levelFile);
-                    if (int.TryParse(content, out int savedLevel) && 
-                        savedLevel >= MIN_LEVEL && savedLevel <= MAX_LEVEL)
-                    {
-                        CurrentLevel = savedLevel;
-                        return savedLevel;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"LoadLevel failed: {ex.Message}");
-            }
-            return MIN_LEVEL;
+            _instance?._speechManager.CancelAll();
         }
 
-        public void NewGame()
+        /// <summary>
+        /// Reads and speaks the current game information.
+        /// </summary>
+        private Task ReadGameInfo()
         {
-            if (HumanPlayerName.Length < 3)
-            {
-                MessageBox.Show("Please type in your name by clicking Edit Human Name in the menu.  Name must be at least 3 characters.\n\nYour name will be saved for future games.",  
-                    "Invalid Name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-        
-        Array.Clear(_chosen, 0, _chosen.Length);
-            NamesTB.Text = string.Empty;
+            if (!_gameManager.NewGameStarted)
+                return Task.CompletedTask;
 
-            DateTimeTB.Text = $"{DateTime.Now.ToShortDateString()} {DateTime.Now.ToShortTimeString()}";
-            NumPlayersTB.Text = $"{CurrentLevel} Computer, {CurrentLevel + 1} Total";
-
-            int ComputerPlayersToPick = CurrentLevel;
-            int TotalPlayers = ComputerPlayersToPick + 1; // Computer players + 1 human player
-            int HumanPlayerIndex = _rng.Next(0, TotalPlayers);
-
-            for (int i = 0; i < TotalPlayers; i++)
-            {
-                if (i == HumanPlayerIndex)
-                {
-                    NamesTB.Text += HumanPlayerName + " - ";
-                }
-                else
-                {
-                    GetPlayer();
-                }
-            }
-
-            NamesTB.Text = NamesTB.Text.TrimEnd(' ', '-');
-            DeleteFileIfExists(LastGamePath);
-
-            timerToolStripMenuItem.Enabled = true;
-            GameRule();
-            _gameTimer.Reset();
-            _nextSpeakTime = _speakInterval;
-            _newGameStarted = true;
-
-            ReadGameInfo();
-            SpeakAsync($"New game started, Game timer will automatically start in {AUTO_START_DELAY_MINUTES} {WordChoice("minute", "minutes", AUTO_START_DELAY_MINUTES)}.");
-
-            _autoStartTimer.Start();
+            MaybeSpeak(READING_GAME_INFORMATION);
+            MaybeSpeak(string.Format(DATE_TIME_FORMAT, DateTimeTB.Text));
+            MaybeSpeak(string.Format(NUM_PLAYERS_FORMAT, NumPlayersTB.Text));
+            MaybeSpeak(string.Format(PLAYER_NAMES_FORMAT, NamesTB.Text));
+            MaybeSpeak(string.Format(GAME_RULE_FORMAT, GameRuleTB.Text));
+            return Task.CompletedTask;
         }
 
-        private string WordChoice(string singular, string plural, int value)
+        /// <summary>
+        /// Speaks the current timer status.
+        /// </summary>
+        private void SpeakTimer()
         {
-            if (value == 1)
-            {
-                return singular;
-            }
-            else
-            {
-                return plural;
-            }
+            string status = _timerManager.IsRunning ? TIMER_STATUS_RUNNING : TIMER_STATUS_STOPPED;
+            string message = string.Format(TIMER_STATUS_FORMAT, status, _timerManager.Elapsed);
+            MaybeSpeak(message);
         }
 
-        public void SaveFullLog()
-        {
-            try
-            {
-                if (!File.Exists(LastGamePath))
-                    return;
-
-                string lastRunContents = File.ReadAllText(LastGamePath);
-                EnsureDirectoryExists(Path.GetDirectoryName(FullLogPath));
-                File.AppendAllText(FullLogPath, lastRunContents);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"SaveFullLog failed: {ex.Message}");
-            }
-        }
-
-        public void GeneratePlayerReport()
-        {
-            try
-            {
-                if (!File.Exists(FullLogPath))
-                    return;
-
-                long wins = 0, losses = 0, currentStreak = 0, longestStreak = 0;
-
-                string[] lines = File.ReadAllLines(FullLogPath);
-
-                foreach (string line in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(line))
-                        continue;
-
-                    if (line.Contains("Result:") && line.Contains("Win"))
-                    {
-                        wins++;
-                        currentStreak++;
-                        longestStreak = Math.Max(longestStreak, currentStreak);
-                    }
-                    else if (line.Contains("Result:") && line.Contains("Loss"))
-                    {
-                        losses++;
-                        currentStreak = 0;
-                    }
-                }
-
-                using (var writer = new StreamWriter(PlayerReportPath, false))
-                {
-                    writer.WriteLine($"NES CPM Player Report for {HumanPlayerName}");
-                    writer.WriteLine(DateTime.Now.ToLongDateString());
-                    writer.WriteLine();
-                    writer.WriteLine();
-                    writer.WriteLine($"      Games Played:  {wins + losses}");
-                    writer.WriteLine($"              Wins:  {wins}");
-                    writer.WriteLine($"Longest Win Streak:  {longestStreak}");
-
-                    double totalGames = wins + losses;
-                    double winRate = totalGames > 0 ? (wins / totalGames) * 100.0 : 0.0;
-                    writer.WriteLine($"          Win Rate:  {winRate:F2}%");
-                    writer.WriteLine($"            Losses:  {losses}");
-                    writer.WriteLine($"     Current Level:  {LoadLevel()}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"GeneratePlayerReport failed: {ex.Message}");
-            }
-        }
-
-        public void GameRule()
-        {
-            string[] laws =
-            {
-                "No trades until computer offers a trade first.",
-                "For your first monopoly, you must build from scratch to hotels in one turn.",
-                "Always roll to get out of jail.",
-                "Always pay to get out of jail.",
-                "Cannot buy any railroads.",
-                "Cannot buy orange or red properties.",
-                "Can only build on 1 monopoly.",
-                "After getting a monopoly, you must pass go 5 times before building on it.",
-                "Play one of the built-in scenarios from the game editor menu.  (1 to 4 players)",
-                "All Players start with $500.",
-                "All players start with $2500.",
-                "Must keep at least $500 available at all times.",
-                "You may use the rewind feature once during your game.",
-                "Play a short game.",
-                "Begin a normal game, and use a 60 minute timer.",
-                "Auction off the first unowned property you land on."
-            };
-
-            int lawNum = _rng.Next(0, laws.Length);
-            GameRuleTB.Text = laws[lawNum];
-        }
-
-        public void GetPlayer()
-        {
-            if (_chosen.All(c => c))
-            {
-                Array.Clear(_chosen, 0, _chosen.Length);
-            }
-
-            for (int attempts = 0; attempts < MAX_PLAYER_SELECTION_ATTEMPTS; attempts++)
-            {
-                int playerNum = _rng.Next(0, PlayerNames.Length);
-
-                if (!_chosen[playerNum])
-                {
-                    _chosen[playerNum] = true;
-                    NamesTB.Text += $"{PlayerNames[playerNum]} - ";
-                    return;
-                }
-            }
-
-            // Fallback: pick first available
-            for (int i = 0; i < PlayerNames.Length; i++)
-            {
-                if (!_chosen[i])
-                {
-                    _chosen[i] = true;
-                    NamesTB.Text += $"{PlayerNames[i]} - ";
-                    return;
-                }
-            }
-        }
-
-        private static void EnsureDirectoryExists(string path)
-        {
-            if (!string.IsNullOrEmpty(path) && !Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
-        }
-
-        private static void DeleteFileIfExists(string filePath)
-        {
-            if (File.Exists(filePath))
-            {
-                try
-                {
-                    File.Delete(filePath);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Delete file failed: {ex.Message}");
-                }
-            }
-        }
-
-        private void SavePlayerName()
-        {
-            try
-            {
-                EnsureDirectoryExists(AppDirectory);
-                using (var writer = new StreamWriter(Path.Combine(AppDirectory, FILE_PLAYER_NAME), false))
-                {
-                    writer.WriteLine(HumanPlayerName);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"SavePlayerName failed: {ex.Message}");
-            }
-        }
-        
-        private void LoadPlayerName()
-        {
-            string playerNamePath = Path.Combine(AppDirectory, FILE_PLAYER_NAME);
-
-            try
-            {
-                if (!File.Exists(playerNamePath))
-                {
-                    HumanPlayerName = "";
-                    return;
-                }
-
-                using (var reader = new StreamReader(playerNamePath))
-                {
-                    HumanPlayerName = reader.ReadLine() ?? "";
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"LoadPlayerName failed: {ex.Message}");
-                HumanPlayerName = "";
-            }
-        }
-
-        private void form1_shown(object sender, EventArgs e)
-        {
-            AssetsNUD.Focus();
-        }
-
+        /// <summary>
+        /// Raises the FormClosing event and performs cleanup.
+        /// </summary>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
+            PerformShutdown();
+        }
 
-            try
+        /// <summary>
+        /// Performs cleanup and shutdown operations.
+        /// </summary>
+        private void PerformShutdown()
+        {
+            StopTimers();
+            SavePlayerData();
+            CancelSpeech();
+            SaveGameData();
+            DisposeManagers();
+        }
+
+        /// <summary>
+        /// Stops all timers.
+        /// </summary>
+        private void StopTimers()
+        {
+            _timerManager?.StopAutoStartTimer();
+        }
+
+        /// <summary>
+        /// Saves player-specific data.
+        /// </summary>
+        private void SavePlayerData()
+        {
+            if (!string.IsNullOrEmpty(HumanPlayerName))
             {
-                _uiTimer?.Stop();
-                _autoStartTimer?.Stop();
-                SavePlayerName();
-
-                lock (_synthLock)
-                {
-                    try
-                    {
-                        _synth?.SpeakAsyncCancelAll();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Failed to cancel speech during closing: {ex.Message}");
-                    }
-                }
-
-                if (_newGameStarted)
-                {
-                    SaveLastGame();
-                    SaveFullLog();
-                    GeneratePlayerReport();
-                    SaveLevel();
-                }
-
-                _uiTimer?.Dispose();
-                _autoStartTimer?.Dispose();
+                _loggingManager?.SavePlayerName(HumanPlayerName);
             }
-            catch (Exception ex)
+        }
+
+        /// <summary>
+        /// Cancels all speech operations.
+        /// </summary>
+        private void CancelSpeech()
+        {
+            _speechManager?.CancelAll();
+        }
+
+        /// <summary>
+        /// Saves game data if a game was started.
+        /// </summary>
+        private void SaveGameData()
+        {
+            if (_gameManager.NewGameStarted)
             {
-                Debug.WriteLine($"OnFormClosing cleanup failed: {ex.Message}");
+                SaveLastGame();
+                _loggingManager.SaveFullLog();
+                _loggingManager.GeneratePlayerReport(HumanPlayerName);
+                _loggingManager.SaveLevel(_gameManager.CurrentLevel, AssetsNUD.Value);
             }
+        }
 
-            try
-            {
-                lock (_synthLock)
-                {
-                    _synth?.Dispose();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed disposing synth: {ex.Message}");
-            }
-
+        /// <summary>
+        /// Disposes of all manager objects.
+        /// </summary>
+        private void DisposeManagers()
+        {
+            _timerManager?.Dispose();
+            _speechManager?.Dispose();
             _instance = null;
         }
 
         #region Menu Event Handlers
+        /// <summary>
+        /// Handles the Save/Exit menu item click.
+        /// </summary>
         private void saveExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Application.Exit();
         }
 
-        private void readToolStripMenuItem_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Handles the Read menu item click.
+        /// </summary>
+        private async void readToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ReadGameInfo();
-        }
-
-        private void ReadGameInfo()
-        {
-            if (!_newGameStarted)
+            if (!_gameManager.NewGameStarted)
+            {
+                MaybeSpeakAsync("No game has been started yet.");
                 return;
-
-            Speak("Reading game information.");
-            Speak($"Date & Time:  {DateTimeTB.Text}");
-            Speak($"Number of Players:  {NumPlayersTB.Text}");
-            Speak($"Player names:  {NamesTB.Text}");
-            Speak($"Game rule:  {GameRuleTB.Text}");
+            }
+            await ReadGameInfo();
         }
 
+        /// <summary>
+        /// Handles the Reset menu item click.
+        /// </summary>
         private void resetToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            _gameTimer.Reset();
-            _nextSpeakTime = _speakInterval;
-            SpeakAsync("Game timer has been reset.");
+            _timerManager.Reset();
+            MaybeSpeakAsync(GAME_TIMER_RESET);
         }
 
+        /// <summary>
+        /// Handles the Start menu item click.
+        /// </summary>
         private void startToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (_gameTimer.IsRunning)
+            if (_timerManager.IsRunning)
             {
-                SpeakAsync("Game timer is already running.");
+                MaybeSpeakAsync(GAME_TIMER_ALREADY_RUNNING);
             }
             else
             {
-                _gameTimer.Start();
-                SpeakAsync("Game timer started.");
+                _timerManager.Start();
+                MaybeSpeakAsync(GAME_TIMER_STARTED);
             }
         }
 
+        /// <summary>
+        /// Handles the Stop menu item click.
+        /// </summary>
         private void stoPToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (_gameTimer.IsRunning)
+            if (_timerManager.IsRunning)
             {
-                _gameTimer.Stop();
-                SpeakAsync("Game timer stopped.");
+                _timerManager.Stop();
+                MaybeSpeakAsync(GAME_TIMER_STOPPED);
             }
             else
             {
-                SpeakAsync("Game timer is already stopped.");
+                MaybeSpeakAsync(GAME_TIMER_ALREADY_STOPPED);
             }
         }
 
+        /// <summary>
+        /// Handles the View Records menu item click.
+        /// </summary>
         private void viewRecordsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GeneratePlayerReport();
+            _loggingManager.GeneratePlayerReport(HumanPlayerName);
             using (var prForm = new ReportViewer())
             {
                 prForm.ShowDialog();
             }
         }
 
+        /// <summary>
+        /// Handles the New Game menu item click.
+        /// </summary>
         private void newGameToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (_newGameStarted)
+            if (_gameManager.NewGameStarted)
             {
-                SpeakAsync("A game is already in progress.");
+                _speechManager.SpeakAsync(GAME_ALREADY_IN_PROGRESS);
                 return;
             }
 
-            LoadLevel();
+            int level = _loggingManager.LoadLevel();
+            _gameManager.SetLevel(level);
             NewGame();
         }
 
+        /// <summary>
+        /// Handles the Speak menu item click.
+        /// </summary>
         private void speakToolStripMenuItem_Click(object sender, EventArgs e)
         {
             SpeakTimer();
         }
 
-        private void SpeakTimer()
+        /// <summary>
+        /// Handles the Form Shown event.
+        /// </summary>
+        private void form1_shown(object sender, EventArgs e)
         {
-            string status = _gameTimer.IsRunning ? "running" : "stopped";
-            Speak($"The game timer is currently {status}, and the elapsed time is {_gameTimer.Elapsed:hh\\:mm\\:ss}.");
+            AssetsNUD.Focus();
         }
         #endregion
 
-        private void editHumanNameToolStripMenuItem_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Sets the human player name and saves it.
+        /// </summary>
+        /// <param name="name">The player name to set.</param>
+        public static void SetHumanPlayerName(string name)
+        {
+            HumanPlayerName = name;
+            _instance?._loggingManager?.SavePlayerName(name);
+        }
+
+        /// <summary>
+        /// Handles the Edit Human Name menu item click.
+        /// </summary>
+        private void humanNameToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using (var playerNameForm = new PlayerName())
             {
                 playerNameForm.ShowDialog();
+                // Reload the player name after editing
+                HumanPlayerName = _loggingManager.LoadPlayerName();
+                MaybeSpeakAsync(string.Format(HUMAN_NAME_SET_FORMAT, HumanPlayerName));
+            }
+        }
+
+        /// <summary>
+        /// Handles the Emulator Path menu item click.
+        /// </summary>
+        private void emulatorPathToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = EXECUTABLE_FILTER;
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    _loggingManager.SaveEmulatorPath(openFileDialog.FileName);
+                    MaybeSpeakAsync(string.Format(EMULATOR_PATH_SET_FORMAT, openFileDialog.FileName));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the Text-to-Speech menu item click.
+        /// </summary>
+        private void textToSpeechToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enabled = !textToSpeechToolStripMenuItem.Checked;
+            _loggingManager.SaveTextToSpeech(enabled);
+            textToSpeechToolStripMenuItem.Checked = enabled;
+            MaybeSpeak(enabled ? TEXT_TO_SPEECH_ENABLED : TEXT_TO_SPEECH_DISABLED);
+        }
+
+        /// <summary>
+        /// Speaks text synchronously if text-to-speech is enabled.
+        /// </summary>
+        /// <param name="text">The text to speak.</param>
+        private void MaybeSpeak(string text)
+        {
+            if (_loggingManager.LoadTextToSpeech())
+            {
+                _speechManager.Speak(text);
+            }
+        }
+
+        /// <summary>
+        /// Speaks text asynchronously if text-to-speech is enabled.
+        /// </summary>
+        /// <param name="text">The text to speak.</param>
+        private void MaybeSpeakAsync(string text)
+        {
+            if (_loggingManager.LoadTextToSpeech())
+            {
+                _speechManager.SpeakAsync(text);
             }
         }
     }
