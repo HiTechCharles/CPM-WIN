@@ -41,20 +41,20 @@
             this.AssetsLBL = new System.Windows.Forms.Label();
             this.AssetsNUD = new System.Windows.Forms.NumericUpDown();
             this.MainMenuMST = new System.Windows.Forms.MenuStrip();
-            this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.emulatorPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.humanNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.readToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewRecordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveExitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.emulatorPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.humanNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.textToSpeechToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.timerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.speakToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stoPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.textToSpeechToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.AssetsNUD)).BeginInit();
             this.MainMenuMST.SuspendLayout();
             this.SuspendLayout();
@@ -206,30 +206,6 @@
             this.MainMenuMST.TabIndex = 0;
             this.MainMenuMST.Text = "menuStrip1";
             // 
-            // editToolStripMenuItem
-            // 
-            this.editToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.emulatorPathToolStripMenuItem,
-            this.humanNameToolStripMenuItem,
-            this.textToSpeechToolStripMenuItem});
-            this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(117, 33);
-            this.editToolStripMenuItem.Text = "&Options";
-            // 
-            // emulatorPathToolStripMenuItem
-            // 
-            this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
-            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
-            this.emulatorPathToolStripMenuItem.Text = "E&mulator Path...";
-            this.emulatorPathToolStripMenuItem.Click += new System.EventHandler(this.emulatorPathToolStripMenuItem_Click);
-            // 
-            // humanNameToolStripMenuItem
-            // 
-            this.humanNameToolStripMenuItem.Name = "humanNameToolStripMenuItem";
-            this.humanNameToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
-            this.humanNameToolStripMenuItem.Text = "&Human Name...";
-            this.humanNameToolStripMenuItem.Click += new System.EventHandler(this.humanNameToolStripMenuItem_Click);
-            // 
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -273,6 +249,37 @@
             this.saveExitToolStripMenuItem.Text = "&Save && Exit";
             this.saveExitToolStripMenuItem.Click += new System.EventHandler(this.saveExitToolStripMenuItem_Click);
             // 
+            // editToolStripMenuItem
+            // 
+            this.editToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.emulatorPathToolStripMenuItem,
+            this.humanNameToolStripMenuItem,
+            this.textToSpeechToolStripMenuItem});
+            this.editToolStripMenuItem.Name = "editToolStripMenuItem";
+            this.editToolStripMenuItem.Size = new System.Drawing.Size(117, 33);
+            this.editToolStripMenuItem.Text = "&Options";
+            // 
+            // emulatorPathToolStripMenuItem
+            // 
+            this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
+            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.emulatorPathToolStripMenuItem.Text = "E&mulator Path...";
+            this.emulatorPathToolStripMenuItem.Click += new System.EventHandler(this.emulatorPathToolStripMenuItem_Click);
+            // 
+            // humanNameToolStripMenuItem
+            // 
+            this.humanNameToolStripMenuItem.Name = "humanNameToolStripMenuItem";
+            this.humanNameToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.humanNameToolStripMenuItem.Text = "&Human Name...";
+            this.humanNameToolStripMenuItem.Click += new System.EventHandler(this.humanNameToolStripMenuItem_Click);
+            // 
+            // textToSpeechToolStripMenuItem
+            // 
+            this.textToSpeechToolStripMenuItem.Name = "textToSpeechToolStripMenuItem";
+            this.textToSpeechToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.textToSpeechToolStripMenuItem.Text = "&Text to Speech";
+            this.textToSpeechToolStripMenuItem.Click += new System.EventHandler(this.textToSpeechToolStripMenuItem_Click);
+            // 
             // timerToolStripMenuItem
             // 
             this.timerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -315,13 +322,6 @@
             this.stoPToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
             this.stoPToolStripMenuItem.Text = "St&op";
             this.stoPToolStripMenuItem.Click += new System.EventHandler(this.stoPToolStripMenuItem_Click);
-            // 
-            // textToSpeechToolStripMenuItem
-            // 
-            this.textToSpeechToolStripMenuItem.Name = "textToSpeechToolStripMenuItem";
-            this.textToSpeechToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
-            this.textToSpeechToolStripMenuItem.Text = "&Text to Speech";
-            this.textToSpeechToolStripMenuItem.Click += new System.EventHandler(this.textToSpeechToolStripMenuItem_Click);
             // 
             // Form1
             // 
