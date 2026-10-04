@@ -89,17 +89,17 @@ CPM-WIN (Computer Player Monopoly - Windows) is a companion tool designed for NE
 ### Using the Timer
 
 - Click "Start Timer" to begin tracking game time
-- The timer can auto-start after a 2-minute delay
+- The timer auto-starts after a 1-minute delay
 - Speech announcements occur at regular intervals
 
 ### Logging Results
 
-- Enter your total assets in the Assets field when the game ends
-- Close the application or start a new game to save results
+- Enter your total assets in the Assets field when the game ends.
+- Use the End Game menu option to save results
 - Results are automatically saved to log files
 - **Level Progression**:
   - Win (positive assets): Advance to the next level
-  - Loss (zero or negative assets): Reset to Level 1
+   - Loss (zero or negative assets): Reset to Level 1
   - Complete Level 7: Reset to Level 1 to start over
   - Your progress is saved in `Level Progress.txt` and loads automatically
 
@@ -120,6 +120,13 @@ The application stores data in your Documents folder:
   - `Full Log.txt` - Complete game history
   - `Player Report.txt` - Statistical summary
   - `Level Progress.txt` - Current difficulty level
+  - `Current Session.xml` - Autosaved in-progress session (used to restore a running game after an unexpected close)
+
+Autosave & Restore
+- The app periodically autosaves an in-progress game so an unexpected program close will not lose progress.
+- Autosave occurs while a game is started (every ~5 seconds) and writes a small XML file named `Current Session.xml` in the application folder (`Documents\CPM\`).
+- When the application starts and a valid `Current Session.xml` exists, the app automatically restores the saved session (number of players, names, selected game rule, assets, elapsed time and timer running state). A confirmation dialog is shown when a session is restored.
+- The saved session remains on normal exit; it is removed only when the user explicitly chooses "End Game" from the menu (this saves final results and deletes the in-progress session file).
 
 ## NES Monopoly Characters
 

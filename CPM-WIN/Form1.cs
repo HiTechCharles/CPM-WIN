@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace CPM_WIN
@@ -45,6 +46,7 @@ namespace CPM_WIN
         private readonly PlayerSelector _playerSelector;
 
         private static Form1 _instance;
+        private int _lastSavedTotalSeconds = -1;
         #endregion
 
         #region Properties
@@ -98,6 +100,7 @@ namespace CPM_WIN
             WireUpEventHandlers();
             InitializeMenuState();
             InitializeFocus();
+            TryRestoreSession();
         }
 
         /// <summary>
@@ -116,6 +119,23 @@ namespace CPM_WIN
         private void TimerManager_OnTimerTick(object sender, TimeSpan elapsed)
         {
             GameTimeTB.Text = _timerManager.GetFormattedTime();
+            // Periodically autosave the current session so an unexpected close can be restored.
+            try
+            {
+                if (_gameManager.NewGameStarted)
+                {
+                    int totalSeconds = (int)elapsed.TotalSeconds;
+                    if (totalSeconds != _lastSavedTotalSeconds && totalSeconds % 5 == 0)
+                    {
+                        SaveCurrentSession(elapsed, false);
+                        _lastSavedTotalSeconds = totalSeconds;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Auto-save failed: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -157,7 +177,7 @@ namespace CPM_WIN
                 // Suppress initialization errors
             }
         }
-
+                
         /// <summary>
         /// Runs the emulator if the path is set.
         /// </summary>
@@ -189,6 +209,101 @@ namespace CPM_WIN
             this.Shown += (s, e) => AssetsNUD.Focus();
         }
 
+        /// <summary>
+        /// Attempts to restore a previously saved current session and update UI/state.
+        /// </summary>
+        private void TryRestoreSession()
+        {
+            try
+            {
+                var session = _loggingManager.LoadCurrentSession();
+                if (session == null)
+                {
+                    Debug.WriteLine("No saved session found to restore.");
+                    return;
+                }
+
+                Debug.WriteLine($"Restoring session from: {_loggingManager.CurrentSessionPath}");
+
+                // Restore level and UI
+                _gameManager.SetLevel(session.Level);
+                DateTimeTB.Text = session.StartDateTime.ToString("g");
+                NumPlayersTB.Text = session.NumPlayers;
+                NamesTB.Text = session.Names;
+                GameRuleTB.Text = session.GameRule;
+                try
+                {
+                    if (session.Assets >= AssetsNUD.Minimum && session.Assets <= AssetsNUD.Maximum)
+                        AssetsNUD.Value = session.Assets;
+                }
+                catch { }
+
+                if (session.NewGameStarted)
+                {
+                    _gameManager.StartNewGame();
+                    timerToolStripMenuItem.Enabled = true;
+                }
+
+                // restore human player name used elsewhere in the UI
+                if (!string.IsNullOrEmpty(session.HumanPlayerName))
+                {
+                    HumanPlayerName = session.HumanPlayerName;
+                }
+
+                _timerManager.SetElapsed(session.Elapsed, session.IsRunning);
+                GameTimeTB.Text = _timerManager.GetFormattedTime();
+
+                // Inform user that a previous in-progress session was restored (include saved date)
+                try
+                {
+                    string msg = $"Restored session from {session.StartDateTime.ToString("g")}: {NumPlayersTB.Text}, elapsed {GameTimeTB.Text}.";
+                    MessageBox.Show(msg, "Session Restored", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Restore session failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves the current in-progress session to disk.
+        /// </summary>
+        /// <param name="elapsed">The current elapsed time to store.</param>
+        /// <param name="showMessage">Whether to show a UI notification when saving.</param>
+        private void SaveCurrentSession(TimeSpan elapsed, bool showMessage = false)
+        {
+            try
+            {
+                var state = new SessionState
+                {
+                    StartDateTime = DateTime.TryParse(DateTimeTB.Text, out var dt) ? dt : DateTime.Now,
+                    NumPlayers = NumPlayersTB.Text,
+                    Names = NamesTB.Text,
+                    GameRule = GameRuleTB.Text,
+                    ElapsedTicks = elapsed.Ticks,
+                    Assets = AssetsNUD.Value,
+                    Level = _gameManager.CurrentLevel,
+                    IsRunning = _timerManager.IsRunning,
+                    NewGameStarted = _gameManager.NewGameStarted,
+                    HumanPlayerName = HumanPlayerName
+                };
+
+                _loggingManager.SaveCurrentSession(state);
+                if (showMessage)
+                {
+                    MessageBox.Show("Session saved.", "Session", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SaveCurrentSession failed: {ex.Message}");
+            }
+        }
+
+        
+        
         /// <summary>
         /// Starts a new game with the current settings.
         /// </summary>
@@ -237,6 +352,9 @@ namespace CPM_WIN
             timerToolStripMenuItem.Enabled = true;
             _timerManager.Reset();
             _gameManager.StartNewGame();
+            // Save initial session immediately so a quick close won't lose the newly started game
+            // Do not show a messagebox for this automatic save
+            SaveCurrentSession(_timerManager.Elapsed, false);
         }
 
         /// <summary>
@@ -277,6 +395,7 @@ namespace CPM_WIN
                     GameTimeTB.Text,
                     AssetsNUD.Value
                 );
+                // Do not delete the in-progress session here; deletion happens only when the user chooses End Game.
             }
             catch (Exception ex)
             {
@@ -304,6 +423,8 @@ namespace CPM_WIN
             _instance?._speechManager.CancelAll();
         }
 
+        
+        
         /// <summary>
         /// Reads and speaks the current game information.
         /// </summary>
@@ -404,10 +525,30 @@ namespace CPM_WIN
 
         #region Menu Event Handlers
         /// <summary>
-        /// Handles the Save/Exit menu item click.
+        /// Handles the end game menu item click.
         /// </summary>
         private void saveExitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            // If a game is in progress, confirm before ending and save final state.
+            if (_gameManager.NewGameStarted)
+            {
+                var result = MessageBox.Show("End current game? This will save the final results and clear the in-progress session.", "End Game", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
+                {
+                    SaveGameData();
+                    // User chose to end the game: remove the in-progress session file so it won't be restored
+                    try
+                    {
+                        _loggingManager.DeleteCurrentSession();
+                    }
+                    catch { }
+                    MessageBox.Show("Game saved and ended.", "End Game", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Application.Exit();
+                }
+                // If No, do nothing and return to the game
+                return;
+            }
+
             Application.Exit();
         }
 

@@ -3,6 +3,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace CPM_WIN
 {
@@ -11,6 +14,8 @@ namespace CPM_WIN
     /// </summary>
     public class LoggingManager
     {
+        // Lock to protect file write/read operations for atomicity
+        private readonly object _fileLock = new object();
         private const string FILE_LAST_GAME = "Last Game.txt";
         private const string FILE_FULL_LOG = "Full Log.txt";
         private const string FILE_PLAYER_REPORT = "Player Report.txt";
@@ -43,6 +48,8 @@ namespace CPM_WIN
         /// </summary>
         public string PlayerReportPath { get; private set; }
 
+        public string CurrentSessionPath { get; private set; }   
+
         /// <summary>
         /// Gets the path to the player name options file.
         /// </summary>
@@ -56,11 +63,94 @@ namespace CPM_WIN
         public LoggingManager()
         {
             AppDirectory = InitializeAppDirectory();
+            CurrentSessionPath = Path.Combine(AppDirectory, "Current Session.xml");
             LastGamePath = Path.Combine(AppDirectory, FILE_LAST_GAME);
             FullLogPath = Path.Combine(AppDirectory, FILE_FULL_LOG);
             PlayerReportPath = Path.Combine(AppDirectory, FILE_PLAYER_REPORT);
             PlayerNamePath = Path.Combine(AppDirectory, FILE_OPTIONS);
             _options = new OptionsManager(AppDirectory);
+        }
+
+        /// <summary>
+        /// Saves the current session state to disk (overwrites any existing session file).
+        /// </summary>
+        /// <param name="state">The session state to save.</param>
+        public void SaveCurrentSession(SessionState state)
+        {
+            try
+            {
+                EnsureDirectoryExists(AppDirectory);
+                // Serialize to a temp file then atomically replace the target on a background thread
+                var serializer = new XmlSerializer(typeof(SessionState));
+                AtomicWriteAsync(CurrentSessionPath, stream => serializer.Serialize(stream, state))
+                    .ContinueWith(t => Debug.WriteLine($"SaveCurrentSession failed: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SaveCurrentSession scheduling failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Async wrapper around AtomicWrite that performs the write on a background thread.
+        /// </summary>
+        /// <param name="targetPath">Path to write to.</param>
+        /// <param name="writeAction">Action that writes to the provided stream.</param>
+        /// <returns>A Task representing the background write operation.</returns>
+        private Task AtomicWriteAsync(string targetPath, Action<Stream> writeAction)
+        {
+            return Task.Run(() => AtomicWrite(targetPath, writeAction));
+        }
+
+        /// <summary>
+        /// Loads the saved current session state, or null if none exists or load fails.
+        /// </summary>
+        /// <returns>The loaded SessionState or null.</returns>
+        public SessionState LoadCurrentSession()
+        {
+            try
+            {
+                if (!File.Exists(CurrentSessionPath))
+                    return null;
+
+                // Lock during read to avoid racing with writers
+                lock (_fileLock)
+                {
+                    var serializer = new XmlSerializer(typeof(SessionState));
+                    using (var stream = File.OpenRead(CurrentSessionPath))
+                    {
+                        var obj = serializer.Deserialize(stream) as SessionState;
+                        return obj;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LoadCurrentSession failed: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Deletes the saved current session file if it exists.
+        /// </summary>
+        public void DeleteCurrentSession()
+        {
+            try
+            {
+                if (File.Exists(CurrentSessionPath))
+                {
+                    // Use lock to avoid deleting while another thread is writing
+                    lock (_fileLock)
+                    {
+                        File.Delete(CurrentSessionPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"DeleteCurrentSession failed: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -111,36 +201,52 @@ namespace CPM_WIN
         }
 
         /// <summary>
-        /// Saves the last game information to file.
+        /// Saves the last finished game's summary information to a file in the application directory.
+        /// This writes a human-readable summary including date/time, players, rule, elapsed time and assets.
         /// </summary>
-        /// <param name="dateTime">The date and time of the game.</param>
-        /// <param name="numPlayers">The number of players.</param>
-        /// <param name="names">The player names.</param>
-        /// <param name="gameRule">The game rule used.</param>
-        /// <param name="gameTime">The elapsed game time.</param>
-        /// <param name="assets">The final asset total.</param>
-        /// <exception cref="Exception">Thrown when the save operation fails.</exception>
+        /// <param name="dateTime">The date and time of the game (display string).</param>
+        /// <param name="numPlayers">The human-readable number of players.</param>
+        /// <param name="names">The player names string.</param>
+        /// <param name="gameRule">The game rule text used in the game.</param>
+        /// <param name="gameTime">The elapsed game time display string.</param>
+        /// <param name="assets">The final asset total as a decimal.</param>
+        /// <exception cref="Exception">Thrown when the save operation fails.
+        /// Callers should present an error to the user when this occurs.</exception>
         public void SaveLastGame(string dateTime, string numPlayers, string names, string gameRule, string gameTime, decimal assets)
         {
             try
             {
                 EnsureDirectoryExists(AppDirectory);
-
-                using (var writer = new StreamWriter(LastGamePath, false))
+                // Perform last-game write in background to avoid blocking UI
+                Task.Run(() =>
                 {
-                    writer.WriteLine($"          Date & Time:  {dateTime}");
-                    writer.WriteLine($"# of Players:  {numPlayers}");
-                    writer.WriteLine($"         Player Names:  {names}");
-                    writer.WriteLine($"            Game Rule:  {gameRule}");
-                    writer.WriteLine($"         Elapsed Time:  {gameTime}");
-                    writer.WriteLine($"         Total Assets:  {assets.ToString("C", CultureInfo.CurrentCulture)}");
-                    writer.WriteLine($"               Result:  {(assets > 0 ? WIN_TEXT : LOSS_TEXT)}");
-                    writer.WriteLine("\n--------------------------------------------------");
-                }
+                    try
+                    {
+                        AtomicWrite(LastGamePath, stream =>
+                        {
+                            using (var writer = new StreamWriter(stream, Encoding.UTF8, 1024, leaveOpen: true))
+                            {
+                                writer.WriteLine($"          Date & Time:  {dateTime}");
+                                writer.WriteLine($"# of Players:  {numPlayers}");
+                                writer.WriteLine($"         Player Names:  {names}");
+                                writer.WriteLine($"            Game Rule:  {gameRule}");
+                                writer.WriteLine($"         Elapsed Time:  {gameTime}");
+                                writer.WriteLine($"         Total Assets:  {assets.ToString("C", CultureInfo.CurrentCulture)}");
+                                writer.WriteLine($"               Result:  {(assets > 0 ? WIN_TEXT : LOSS_TEXT)}");
+                                writer.WriteLine("\n--------------------------------------------------");
+                                writer.Flush();
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"SaveLastGame failed: {ex.Message}");
+                    }
+                });
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error saving game: {ex.Message}", ex);
+                throw new Exception($"Error scheduling save of last game: {ex.Message}", ex);
             }
         }
 
@@ -153,10 +259,27 @@ namespace CPM_WIN
             {
                 if (!File.Exists(LastGamePath))
                     return;
-
                 string lastRunContents = File.ReadAllText(LastGamePath);
                 EnsureDirectoryExists(Path.GetDirectoryName(FullLogPath));
-                File.AppendAllText(FullLogPath, lastRunContents);
+                // Append on background thread under lock to avoid blocking UI and concurrent writers
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        lock (_fileLock)
+                        {
+                            using (var fs = new FileStream(FullLogPath, FileMode.Append, FileAccess.Write, FileShare.None))
+                            {
+                                var bytes = Encoding.UTF8.GetBytes(lastRunContents);
+                                fs.Write(bytes, 0, bytes.Length);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"SaveFullLog failed: {ex.Message}");
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -184,7 +307,16 @@ namespace CPM_WIN
 
                 if (assets > 0)
                 {
-                    File.WriteAllText(levelFile, nextLevel.ToString());
+                    EnsureDirectoryExists(Path.GetDirectoryName(levelFile));
+                    // Write level progress asynchronously
+                    AtomicWriteAsync(levelFile, stream =>
+                    {
+                        using (var writer = new StreamWriter(stream, Encoding.UTF8, 1024, leaveOpen: true))
+                        {
+                            writer.Write(nextLevel.ToString());
+                            writer.Flush();
+                        }
+                    }).ContinueWith(t => Debug.WriteLine($"SaveLevel failed: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
                 }
             }
             catch (Exception ex)
@@ -397,6 +529,47 @@ namespace CPM_WIN
                 {
                     Debug.WriteLine($"Delete file failed: {ex.Message}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Atomically write content to a target file path by writing to a temp file then replacing the target.
+        /// The writeAction should write to the provided stream (which will be closed by this method).
+        /// </summary>
+        /// <param name="targetPath">The file path to write to atomically.</param>
+        /// <param name="writeAction">Action that writes content to the provided stream.</param>
+        private void AtomicWrite(string targetPath, Action<Stream> writeAction)
+        {
+            var dir = Path.GetDirectoryName(targetPath);
+            EnsureDirectoryExists(dir);
+
+            string tempPath = null;
+            try
+            {
+                tempPath = Path.Combine(dir, Path.GetFileName(targetPath) + ".tmp" + Guid.NewGuid().ToString("N"));
+                // Write to temp file first
+                using (var stream = File.Create(tempPath))
+                {
+                    writeAction(stream);
+                }
+
+                lock (_fileLock)
+                {
+                    if (File.Exists(targetPath))
+                    {
+                        // Replace preserves ACLs when available
+                        File.Replace(tempPath, targetPath, null);
+                    }
+                    else
+                    {
+                        File.Move(tempPath, targetPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"AtomicWrite failed for {targetPath}: {ex.Message}");
+                try { if (tempPath != null && File.Exists(tempPath)) File.Delete(tempPath); } catch { }
             }
         }
     }

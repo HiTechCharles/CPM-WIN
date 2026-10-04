@@ -65,7 +65,7 @@
             this.DateTimeLBL.Location = new System.Drawing.Point(72, 62);
             this.DateTimeLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.DateTimeLBL.Name = "DateTimeLBL";
-            this.DateTimeLBL.Size = new System.Drawing.Size(170, 29);
+            this.DateTimeLBL.Size = new System.Drawing.Size(212, 36);
             this.DateTimeLBL.TabIndex = 1;
             this.DateTimeLBL.Text = "&Date && Time:";
             // 
@@ -75,7 +75,7 @@
             this.DateTimeTB.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.DateTimeTB.Name = "DateTimeTB";
             this.DateTimeTB.ReadOnly = true;
-            this.DateTimeTB.Size = new System.Drawing.Size(457, 36);
+            this.DateTimeTB.Size = new System.Drawing.Size(457, 44);
             this.DateTimeTB.TabIndex = 2;
             // 
             // NumPlayersTB
@@ -84,7 +84,7 @@
             this.NumPlayersTB.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.NumPlayersTB.Name = "NumPlayersTB";
             this.NumPlayersTB.ReadOnly = true;
-            this.NumPlayersTB.Size = new System.Drawing.Size(457, 36);
+            this.NumPlayersTB.Size = new System.Drawing.Size(457, 44);
             this.NumPlayersTB.TabIndex = 4;
             // 
             // NumPlayersLBL
@@ -93,7 +93,7 @@
             this.NumPlayersLBL.Location = new System.Drawing.Point(75, 137);
             this.NumPlayersLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.NumPlayersLBL.Name = "NumPlayersLBL";
-            this.NumPlayersLBL.Size = new System.Drawing.Size(167, 29);
+            this.NumPlayersLBL.Size = new System.Drawing.Size(209, 36);
             this.NumPlayersLBL.TabIndex = 3;
             this.NumPlayersLBL.Text = "# of Players:";
             // 
@@ -115,7 +115,7 @@
             this.NamesLBL.Location = new System.Drawing.Point(56, 249);
             this.NamesLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.NamesLBL.Name = "NamesLBL";
-            this.NamesLBL.Size = new System.Drawing.Size(186, 29);
+            this.NamesLBL.Size = new System.Drawing.Size(233, 36);
             this.NamesLBL.TabIndex = 5;
             this.NamesLBL.Text = "&Player Names:";
             // 
@@ -137,7 +137,7 @@
             this.GameRuleLBL.Location = new System.Drawing.Point(91, 359);
             this.GameRuleLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.GameRuleLBL.Name = "GameRuleLBL";
-            this.GameRuleLBL.Size = new System.Drawing.Size(151, 29);
+            this.GameRuleLBL.Size = new System.Drawing.Size(190, 36);
             this.GameRuleLBL.TabIndex = 7;
             this.GameRuleLBL.Text = "&Game Rule:";
             // 
@@ -148,7 +148,7 @@
             this.GameTimeTB.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.GameTimeTB.Name = "GameTimeTB";
             this.GameTimeTB.ReadOnly = true;
-            this.GameTimeTB.Size = new System.Drawing.Size(457, 36);
+            this.GameTimeTB.Size = new System.Drawing.Size(457, 44);
             this.GameTimeTB.TabIndex = 10;
             // 
             // GameTimeLBL
@@ -158,7 +158,7 @@
             this.GameTimeLBL.Location = new System.Drawing.Point(62, 433);
             this.GameTimeLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.GameTimeLBL.Name = "GameTimeLBL";
-            this.GameTimeLBL.Size = new System.Drawing.Size(180, 29);
+            this.GameTimeLBL.Size = new System.Drawing.Size(225, 36);
             this.GameTimeLBL.TabIndex = 9;
             this.GameTimeLBL.Text = "&Elapsed Time:";
             // 
@@ -169,7 +169,7 @@
             this.AssetsLBL.Location = new System.Drawing.Point(76, 513);
             this.AssetsLBL.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.AssetsLBL.Name = "AssetsLBL";
-            this.AssetsLBL.Size = new System.Drawing.Size(166, 29);
+            this.AssetsLBL.Size = new System.Drawing.Size(207, 36);
             this.AssetsLBL.TabIndex = 11;
             this.AssetsLBL.Text = "Total &Assets:";
             // 
@@ -188,7 +188,7 @@
             0,
             0});
             this.AssetsNUD.Name = "AssetsNUD";
-            this.AssetsNUD.Size = new System.Drawing.Size(457, 36);
+            this.AssetsNUD.Size = new System.Drawing.Size(457, 44);
             this.AssetsNUD.TabIndex = 12;
             // 
             // MainMenuMST
@@ -201,27 +201,26 @@
             this.timerToolStripMenuItem});
             this.MainMenuMST.Location = new System.Drawing.Point(0, 0);
             this.MainMenuMST.Name = "MainMenuMST";
-            this.MainMenuMST.Padding = new System.Windows.Forms.Padding(8, 2, 0, 2);
-            this.MainMenuMST.Size = new System.Drawing.Size(761, 37);
+            this.MainMenuMST.Size = new System.Drawing.Size(761, 44);
             this.MainMenuMST.TabIndex = 0;
             this.MainMenuMST.Text = "menuStrip1";
             // 
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.saveExitToolStripMenuItem,
             this.newGameToolStripMenuItem,
             this.readToolStripMenuItem,
-            this.viewRecordsToolStripMenuItem,
-            this.saveExitToolStripMenuItem});
+            this.viewRecordsToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(94, 33);
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(116, 40);
             this.optionsToolStripMenuItem.Text = "&Game";
             // 
             // newGameToolStripMenuItem
             // 
             this.newGameToolStripMenuItem.Name = "newGameToolStripMenuItem";
             this.newGameToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-            this.newGameToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
+            this.newGameToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
             this.newGameToolStripMenuItem.Text = "&New Game";
             this.newGameToolStripMenuItem.Click += new System.EventHandler(this.newGameToolStripMenuItem_Click);
             // 
@@ -229,7 +228,7 @@
             // 
             this.readToolStripMenuItem.Name = "readToolStripMenuItem";
             this.readToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.D)));
-            this.readToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
+            this.readToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
             this.readToolStripMenuItem.Text = "&Read";
             this.readToolStripMenuItem.Click += new System.EventHandler(this.readToolStripMenuItem_Click);
             // 
@@ -237,16 +236,16 @@
             // 
             this.viewRecordsToolStripMenuItem.Name = "viewRecordsToolStripMenuItem";
             this.viewRecordsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.V)));
-            this.viewRecordsToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
+            this.viewRecordsToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
             this.viewRecordsToolStripMenuItem.Text = "Report &Viewer";
             this.viewRecordsToolStripMenuItem.Click += new System.EventHandler(this.viewRecordsToolStripMenuItem_Click);
             // 
             // saveExitToolStripMenuItem
             // 
             this.saveExitToolStripMenuItem.Name = "saveExitToolStripMenuItem";
-            this.saveExitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
-            this.saveExitToolStripMenuItem.Size = new System.Drawing.Size(348, 34);
-            this.saveExitToolStripMenuItem.Text = "&Save && Exit";
+            this.saveExitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
+            this.saveExitToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
+            this.saveExitToolStripMenuItem.Text = "&End Game";
             this.saveExitToolStripMenuItem.Click += new System.EventHandler(this.saveExitToolStripMenuItem_Click);
             // 
             // editToolStripMenuItem
@@ -256,27 +255,27 @@
             this.humanNameToolStripMenuItem,
             this.textToSpeechToolStripMenuItem});
             this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(117, 33);
+            this.editToolStripMenuItem.Size = new System.Drawing.Size(145, 40);
             this.editToolStripMenuItem.Text = "&Options";
             // 
             // emulatorPathToolStripMenuItem
             // 
             this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
-            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(346, 40);
             this.emulatorPathToolStripMenuItem.Text = "E&mulator Path...";
             this.emulatorPathToolStripMenuItem.Click += new System.EventHandler(this.emulatorPathToolStripMenuItem_Click);
             // 
             // humanNameToolStripMenuItem
             // 
             this.humanNameToolStripMenuItem.Name = "humanNameToolStripMenuItem";
-            this.humanNameToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.humanNameToolStripMenuItem.Size = new System.Drawing.Size(346, 40);
             this.humanNameToolStripMenuItem.Text = "&Human Name...";
             this.humanNameToolStripMenuItem.Click += new System.EventHandler(this.humanNameToolStripMenuItem_Click);
             // 
             // textToSpeechToolStripMenuItem
             // 
             this.textToSpeechToolStripMenuItem.Name = "textToSpeechToolStripMenuItem";
-            this.textToSpeechToolStripMenuItem.Size = new System.Drawing.Size(281, 34);
+            this.textToSpeechToolStripMenuItem.Size = new System.Drawing.Size(346, 40);
             this.textToSpeechToolStripMenuItem.Text = "&Text to Speech";
             this.textToSpeechToolStripMenuItem.Click += new System.EventHandler(this.textToSpeechToolStripMenuItem_Click);
             // 
@@ -288,14 +287,14 @@
             this.startToolStripMenuItem,
             this.stoPToolStripMenuItem});
             this.timerToolStripMenuItem.Name = "timerToolStripMenuItem";
-            this.timerToolStripMenuItem.Size = new System.Drawing.Size(94, 33);
+            this.timerToolStripMenuItem.Size = new System.Drawing.Size(116, 40);
             this.timerToolStripMenuItem.Text = "&Timer";
             // 
             // resetToolStripMenuItem
             // 
             this.resetToolStripMenuItem.Name = "resetToolStripMenuItem";
             this.resetToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.R)));
-            this.resetToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
+            this.resetToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
             this.resetToolStripMenuItem.Text = "&Reset";
             this.resetToolStripMenuItem.Click += new System.EventHandler(this.resetToolStripMenuItem_Click);
             // 
@@ -303,7 +302,7 @@
             // 
             this.speakToolStripMenuItem.Name = "speakToolStripMenuItem";
             this.speakToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
-            this.speakToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
+            this.speakToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
             this.speakToolStripMenuItem.Text = "Sp&eak";
             this.speakToolStripMenuItem.Click += new System.EventHandler(this.speakToolStripMenuItem_Click);
             // 
@@ -311,7 +310,7 @@
             // 
             this.startToolStripMenuItem.Name = "startToolStripMenuItem";
             this.startToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.startToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
+            this.startToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
             this.startToolStripMenuItem.Text = "&Start";
             this.startToolStripMenuItem.Click += new System.EventHandler(this.startToolStripMenuItem_Click);
             // 
@@ -319,13 +318,13 @@
             // 
             this.stoPToolStripMenuItem.Name = "stoPToolStripMenuItem";
             this.stoPToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.stoPToolStripMenuItem.Size = new System.Drawing.Size(249, 34);
+            this.stoPToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
             this.stoPToolStripMenuItem.Text = "St&op";
             this.stoPToolStripMenuItem.Click += new System.EventHandler(this.stoPToolStripMenuItem_Click);
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(15F, 29F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(19F, 36F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.DarkGreen;
             this.ClientSize = new System.Drawing.Size(761, 583);

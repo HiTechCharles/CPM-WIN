@@ -128,6 +128,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SessionState.cs" />
     <Compile Include="SpeechManager.cs" />
     <Compile Include="TimerManager.cs" />
     <EmbeddedResource Include="Form1.resx">

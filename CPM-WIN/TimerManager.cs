@@ -18,6 +18,7 @@ namespace CPM_WIN
         private readonly Timer _uiTimer;
         private readonly Timer _autoStartTimer;
         private readonly Stopwatch _gameTimer = new Stopwatch();
+        private TimeSpan _initialElapsed = TimeSpan.Zero;
         private TimeSpan _nextSpeakTime = TimeSpan.FromMinutes(DEFAULT_SPEAK_INTERVAL_MINUTES);
         private TimeSpan _speakInterval = TimeSpan.FromMinutes(DEFAULT_SPEAK_INTERVAL_MINUTES);
         private bool _disposed;
@@ -43,9 +44,9 @@ namespace CPM_WIN
         public bool IsRunning => _gameTimer.IsRunning;
 
         /// <summary>
-        /// Gets the current elapsed time on the game timer.
+        /// Gets the current elapsed time on the game timer, including any initial offset used when restoring state.
         /// </summary>
-        public TimeSpan Elapsed => _gameTimer.Elapsed;
+        public TimeSpan Elapsed => _initialElapsed + _gameTimer.Elapsed;
 
         /// <summary>
         /// Initializes a new instance of the TimerManager class.
@@ -69,8 +70,7 @@ namespace CPM_WIN
         {
             if (_disposed)
                 return;
-
-            var elapsed = _gameTimer.Elapsed;
+            var elapsed = Elapsed;
             OnTimerTick?.Invoke(this, elapsed);
 
             if (_gameTimer.IsRunning)
@@ -166,10 +166,32 @@ namespace CPM_WIN
         /// <returns>A formatted time string in the format "h:mm:ss" or "mm:ss".</returns>
         public string GetFormattedTime()
         {
-            var elapsed = _gameTimer.Elapsed;
+            var elapsed = Elapsed;
             return elapsed.TotalHours >= 1
                 ? elapsed.ToString(@"h\:mm\:ss")
                 : elapsed.ToString(@"mm\:ss");
+        }
+
+        /// <summary>
+        /// Sets the elapsed time and running state for restoring a previous session.
+        /// </summary>
+        /// <param name="elapsed">The elapsed time to restore.</param>
+        /// <param name="isRunning">Whether the timer should be running after restore.</param>
+        public void SetElapsed(TimeSpan elapsed, bool isRunning)
+        {
+            _initialElapsed = elapsed;
+            try
+            {
+                _gameTimer.Reset();
+                if (isRunning)
+                    _gameTimer.Start();
+                else
+                    _gameTimer.Stop();
+            }
+            catch (Exception)
+            {
+                // ignore
+            }
         }
 
         /// <summary>
