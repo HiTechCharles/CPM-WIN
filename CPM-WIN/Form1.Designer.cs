@@ -41,20 +41,18 @@
             this.AssetsLBL = new System.Windows.Forms.Label();
             this.AssetsNUD = new System.Windows.Forms.NumericUpDown();
             this.MainMenuMST = new System.Windows.Forms.MenuStrip();
-            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.GameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveExitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.readToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewRecordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.saveExitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.emulatorPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.humanNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.textToSpeechToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.timerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.speakToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stoPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.emulatorPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.AssetsNUD)).BeginInit();
             this.MainMenuMST.SuspendLayout();
             this.SuspendLayout();
@@ -196,25 +194,33 @@
             this.MainMenuMST.Font = new System.Drawing.Font("Tahoma", 18F, System.Drawing.FontStyle.Bold);
             this.MainMenuMST.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.MainMenuMST.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.optionsToolStripMenuItem,
-            this.editToolStripMenuItem,
+            this.GameToolStripMenuItem,
             this.timerToolStripMenuItem});
             this.MainMenuMST.Location = new System.Drawing.Point(0, 0);
             this.MainMenuMST.Name = "MainMenuMST";
-            this.MainMenuMST.Size = new System.Drawing.Size(761, 44);
+            this.MainMenuMST.Size = new System.Drawing.Size(762, 44);
             this.MainMenuMST.TabIndex = 0;
             this.MainMenuMST.Text = "menuStrip1";
             // 
-            // optionsToolStripMenuItem
+            // GameToolStripMenuItem
             // 
-            this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.GameToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.saveExitToolStripMenuItem,
             this.newGameToolStripMenuItem,
+            this.optionsToolStripMenuItem,
             this.readToolStripMenuItem,
             this.viewRecordsToolStripMenuItem});
-            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(116, 40);
-            this.optionsToolStripMenuItem.Text = "&Game";
+            this.GameToolStripMenuItem.Name = "GameToolStripMenuItem";
+            this.GameToolStripMenuItem.Size = new System.Drawing.Size(116, 40);
+            this.GameToolStripMenuItem.Text = "&Game";
+            // 
+            // saveExitToolStripMenuItem
+            // 
+            this.saveExitToolStripMenuItem.Name = "saveExitToolStripMenuItem";
+            this.saveExitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
+            this.saveExitToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
+            this.saveExitToolStripMenuItem.Text = "&End Game";
+            this.saveExitToolStripMenuItem.Click += new System.EventHandler(this.saveExitToolStripMenuItem_Click);
             // 
             // newGameToolStripMenuItem
             // 
@@ -239,45 +245,6 @@
             this.viewRecordsToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
             this.viewRecordsToolStripMenuItem.Text = "Report &Viewer";
             this.viewRecordsToolStripMenuItem.Click += new System.EventHandler(this.viewRecordsToolStripMenuItem_Click);
-            // 
-            // saveExitToolStripMenuItem
-            // 
-            this.saveExitToolStripMenuItem.Name = "saveExitToolStripMenuItem";
-            this.saveExitToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
-            this.saveExitToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
-            this.saveExitToolStripMenuItem.Text = "&End Game";
-            this.saveExitToolStripMenuItem.Click += new System.EventHandler(this.saveExitToolStripMenuItem_Click);
-            // 
-            // editToolStripMenuItem
-            // 
-            this.editToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.emulatorPathToolStripMenuItem,
-            this.humanNameToolStripMenuItem,
-            this.textToSpeechToolStripMenuItem});
-            this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(145, 40);
-            this.editToolStripMenuItem.Text = "&Options";
-            // 
-            // emulatorPathToolStripMenuItem
-            // 
-            this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
-            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(346, 40);
-            this.emulatorPathToolStripMenuItem.Text = "E&mulator Path...";
-            this.emulatorPathToolStripMenuItem.Click += new System.EventHandler(this.emulatorPathToolStripMenuItem_Click);
-            // 
-            // humanNameToolStripMenuItem
-            // 
-            this.humanNameToolStripMenuItem.Name = "humanNameToolStripMenuItem";
-            this.humanNameToolStripMenuItem.Size = new System.Drawing.Size(346, 40);
-            this.humanNameToolStripMenuItem.Text = "&Human Name...";
-            this.humanNameToolStripMenuItem.Click += new System.EventHandler(this.humanNameToolStripMenuItem_Click);
-            // 
-            // textToSpeechToolStripMenuItem
-            // 
-            this.textToSpeechToolStripMenuItem.Name = "textToSpeechToolStripMenuItem";
-            this.textToSpeechToolStripMenuItem.Size = new System.Drawing.Size(346, 40);
-            this.textToSpeechToolStripMenuItem.Text = "&Text to Speech";
-            this.textToSpeechToolStripMenuItem.Click += new System.EventHandler(this.textToSpeechToolStripMenuItem_Click);
             // 
             // timerToolStripMenuItem
             // 
@@ -322,12 +289,25 @@
             this.stoPToolStripMenuItem.Text = "St&op";
             this.stoPToolStripMenuItem.Click += new System.EventHandler(this.stoPToolStripMenuItem_Click);
             // 
+            // emulatorPathToolStripMenuItem
+            // 
+            this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
+            this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(32, 19);
+            // 
+            // optionsToolStripMenuItem
+            // 
+            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
+            this.optionsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
+            this.optionsToolStripMenuItem.Text = "&Options...";
+            this.optionsToolStripMenuItem.Click += new System.EventHandler(this.optionsToolStripMenuItem_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(19F, 36F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.DarkGreen;
-            this.ClientSize = new System.Drawing.Size(761, 583);
+            this.ClientSize = new System.Drawing.Size(762, 583);
             this.Controls.Add(this.AssetsNUD);
             this.Controls.Add(this.AssetsLBL);
             this.Controls.Add(this.GameTimeTB);
@@ -371,7 +351,7 @@
         private System.Windows.Forms.Label AssetsLBL;
         private System.Windows.Forms.NumericUpDown AssetsNUD;
         private System.Windows.Forms.MenuStrip MainMenuMST;
-        private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem GameToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveExitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem timerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem resetToolStripMenuItem;
@@ -380,11 +360,9 @@
         private System.Windows.Forms.ToolStripMenuItem readToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem viewRecordsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem newGameToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem speakToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem editToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem humanNameToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem emulatorPathToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem textToSpeechToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem speakToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem optionsToolStripMenuItem;
     }
 }
 

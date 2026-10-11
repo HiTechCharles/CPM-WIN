@@ -1,21 +1,17 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Xml.Serialization;
 
 namespace CPM_WIN
 {
     /// <summary>
     /// Manages application options including emulator path, player name, and text-to-speech preference.
-    /// Options are saved to and loaded from options.txt in the application directory.
+    /// Options are saved to and loaded from Options.xml in the application directory.
     /// </summary>
     public class OptionsManager
     {
-        private const string OPTIONS_FILE = "Options.txt";
-        private const string EMULATOR_PATH_KEY = "EmulatorPath";
-        private const string PLAYER_NAME_KEY = "PlayerName";
-        private const string TEXT_TO_SPEECH_KEY = "TextToSpeech";
-        private const char KEY_VALUE_SEPARATOR = '=';
-        private const int EXPECTED_PARTS_COUNT = 2;
+        private const string OPTIONS_FILE = "Options.xml";
         private const bool DEFAULT_TEXT_TO_SPEECH = true;
 
         private readonly string _appDirectory;
@@ -38,9 +34,31 @@ namespace CPM_WIN
         public bool TextToSpeechEnabled { get; set; }
 
         /// <summary>
+        /// Gets or sets the timer interval (minutes) for spoken announcements.
+        /// </summary>
+        public decimal TimerInterval { get; set; }
+
+        /// <summary>
+        /// Gets or sets the start delay (minutes) before auto-start.
+        /// </summary>
+        public decimal StartDelay { get; set; }
+
+        /// <summary>
+        /// DTO used for XML serialization of options.
+        /// </summary>
+        public class OptionsDto
+        {
+            public string EmulatorPath { get; set; }
+            public string PlayerName { get; set; }
+            public bool TextToSpeechEnabled { get; set; } = DEFAULT_TEXT_TO_SPEECH;
+            public decimal TimerInterval { get; set; } = 10m;
+            public decimal StartDelay { get; set; } = 0m;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the OptionsManager class.
         /// </summary>
-        /// <param name="appDirectory">The application directory where options.txt will be stored.</param>
+        /// <param name="appDirectory">The application directory where Options.xml will be stored.</param>
         /// <exception cref="ArgumentNullException">Thrown when appDirectory is null or whitespace.</exception>
         public OptionsManager(string appDirectory)
         {
@@ -55,11 +73,13 @@ namespace CPM_WIN
             EmulatorPath = string.Empty;
             PlayerName = string.Empty;
             TextToSpeechEnabled = DEFAULT_TEXT_TO_SPEECH;
+            TimerInterval = 10m;
+            StartDelay = 0m;
             _disposed = false;
         }
 
         /// <summary>
-        /// Loads options from the options.txt file.
+        /// Loads options from the Options.xml file.
         /// </summary>
         public void Load()
         {
@@ -69,12 +89,20 @@ namespace CPM_WIN
             try
             {
                 if (!File.Exists(_optionsFilePath))
-                {
                     return;
-                }
 
-                string[] lines = File.ReadAllLines(_optionsFilePath);
-                ParseOptionsFromLines(lines);
+                var serializer = new XmlSerializer(typeof(OptionsDto));
+                using (var stream = File.OpenRead(_optionsFilePath))
+                {
+                    if (serializer.Deserialize(stream) is OptionsDto dto)
+                    {
+                        EmulatorPath = dto.EmulatorPath ?? string.Empty;
+                        PlayerName = dto.PlayerName ?? string.Empty;
+                        TextToSpeechEnabled = dto.TextToSpeechEnabled;
+                        TimerInterval = dto.TimerInterval;
+                        StartDelay = dto.StartDelay;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -83,45 +111,7 @@ namespace CPM_WIN
         }
 
         /// <summary>
-        /// Parses options from an array of configuration lines.
-        /// </summary>
-        /// <param name="lines">The lines to parse.</param>
-        private void ParseOptionsFromLines(string[] lines)
-        {
-            foreach (string line in lines)
-            {
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
-
-                string[] parts = line.Split(new[] { KEY_VALUE_SEPARATOR }, EXPECTED_PARTS_COUNT);
-                if (parts.Length != EXPECTED_PARTS_COUNT)
-                {
-                    continue;
-                }
-
-                string key = parts[0].Trim();
-                string value = parts[1].Trim();
-
-                switch (key)
-                {
-                    case EMULATOR_PATH_KEY:
-                        EmulatorPath = value;
-                        break;
-                    case PLAYER_NAME_KEY:
-                        PlayerName = value;
-                        break;
-                    case TEXT_TO_SPEECH_KEY:
-                        if (bool.TryParse(value, out bool enabled))
-                            TextToSpeechEnabled = enabled;
-                        break;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Saves options to the options.txt file.
+        /// Saves options to the Options.xml file atomically.
         /// </summary>
         public void Save()
         {
@@ -132,20 +122,33 @@ namespace CPM_WIN
             {
                 EnsureDirectoryExists(_appDirectory);
 
-                using (var writer = new StreamWriter(_optionsFilePath, false))
+                var dto = new OptionsDto
                 {
-                    // Always write TextToSpeech setting so it's preserved even when false
-                    writer.WriteLine($"{TEXT_TO_SPEECH_KEY}={TextToSpeechEnabled}");
+                    EmulatorPath = EmulatorPath,
+                    PlayerName = PlayerName,
+                    TextToSpeechEnabled = TextToSpeechEnabled
+                    ,
+                    TimerInterval = TimerInterval,
+                    StartDelay = StartDelay
+                };
 
-                    if (!string.IsNullOrEmpty(EmulatorPath))
-                    {
-                        writer.WriteLine($"{EMULATOR_PATH_KEY}={EmulatorPath}");
-                    }
+                var serializer = new XmlSerializer(typeof(OptionsDto));
+                string tempFile = _optionsFilePath + ".tmp";
 
-                    if (!string.IsNullOrEmpty(PlayerName))
-                    {
-                        writer.WriteLine($"{PLAYER_NAME_KEY}={PlayerName}");
-                    }
+                using (var stream = File.Create(tempFile))
+                {
+                    serializer.Serialize(stream, dto);
+                    stream.Flush();
+                }
+
+                if (File.Exists(_optionsFilePath))
+                {
+                    // Replace existing file with the temp file atomically
+                    File.Replace(tempFile, _optionsFilePath, null);
+                }
+                else
+                {
+                    File.Move(tempFile, _optionsFilePath);
                 }
             }
             catch (Exception ex)

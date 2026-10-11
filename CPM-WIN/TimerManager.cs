@@ -10,8 +10,9 @@ namespace CPM_WIN
     public class TimerManager : IDisposable
     {
         private const int UI_TIMER_INTERVAL_MS = 200;
-        private const int AUTO_START_DELAY_MS = 60000; // 1 minute
-        public const int AUTO_START_DELAY_MINUTES = AUTO_START_DELAY_MS / 60000;
+        // Backing field for auto-start delay (milliseconds). Make non-const so it can be changed at runtime.
+        private static int _autoStartDelayMs = 60000; // 1 minute
+        public static int AUTO_START_DELAY_MINUTES => _autoStartDelayMs / 60000;
         private const int DEFAULT_SPEAK_INTERVAL_MINUTES = 10;
         private const int MIN_SPEAK_INTERVAL_MINUTES = 1;
 
@@ -57,10 +58,32 @@ namespace CPM_WIN
             _uiTimer.Tick += UiTimer_Tick;
             _uiTimer.Start();
 
-            _autoStartTimer = new Timer { Interval = AUTO_START_DELAY_MS };
+            _autoStartTimer = new Timer { Interval = _autoStartDelayMs };
             _autoStartTimer.Tick += AutoStartTimer_Tick;
 
             _disposed = false;
+        }
+
+        /// <summary>
+        /// Updates the auto-start delay used by this TimerManager instance (in minutes).
+        /// Also updates the shared backing value so other parts of the app report the new value.
+        /// </summary>
+        /// <param name="minutes">Delay in minutes (minimum 1).</param>
+        public void SetAutoStartDelayMinutes(int minutes)
+        {
+            try
+            {
+                if (minutes < 1) minutes = 1;
+                _autoStartDelayMs = minutes * 60000;
+                if (_autoStartTimer != null)
+                {
+                    _autoStartTimer.Interval = _autoStartDelayMs;
+                }
+            }
+            catch
+            {
+                // suppress errors
+            }
         }
 
         /// <summary>

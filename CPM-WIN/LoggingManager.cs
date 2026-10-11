@@ -20,7 +20,7 @@ namespace CPM_WIN
         private const string FILE_FULL_LOG = "Full Log.txt";
         private const string FILE_PLAYER_REPORT = "Player Report.txt";
         private const string FILE_LEVEL_PROGRESS = "Level Progress.txt";
-        private const string FILE_OPTIONS = "Options.txt";
+        private const string FILE_OPTIONS = "Options.xml";
         private const int MAX_LEVEL = 7;
         private const int MIN_LEVEL = 1;
         private const int MIN_WIN_STREAK_TRACKING = 1;
@@ -484,6 +484,42 @@ namespace CPM_WIN
         public bool LoadTextToSpeech()
         {
             return _options.LoadTextToSpeech();
+        }
+
+        /// <summary>
+        /// Saves the spoken timer interval (minutes) to options.
+        /// </summary>
+        /// <param name="minutes">Interval in minutes.</param>
+        public void SaveTimerInterval(decimal minutes)
+        {
+            _options.TimerInterval = minutes;
+            _options.Save();
+        }
+
+        /// <summary>
+        /// Loads the spoken timer interval (minutes) from options.
+        /// </summary>
+        /// <returns>Interval in minutes.</returns>
+        public decimal LoadTimerInterval()
+        {
+            return _options.LoadTextToSpeech() ? _options.TimerInterval : _options.TimerInterval; // just return stored value
+        }
+
+        /// <summary>
+        /// Saves the start delay (minutes) to options.
+        /// </summary>
+        public void SaveStartDelay(decimal minutes)
+        {
+            _options.StartDelay = minutes;
+            _options.Save();
+        }
+
+        /// <summary>
+        /// Loads the start delay (minutes) from options.
+        /// </summary>
+        public decimal LoadStartDelay()
+        {
+            return _options.StartDelay;
         }
 
         /// <summary>

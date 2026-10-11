@@ -80,6 +80,27 @@ namespace CPM_WIN
         /// Gets the player name file path (for backward compatibility).
         /// </summary>
         public static string PlayerNamePath => _instance?._loggingManager.PlayerNamePath;
+
+        /// <summary>
+        /// Updates the auto-start delay (in minutes) used by the running TimerManager and global display.
+        /// Called by the Options dialog after saving a new start delay so the running app uses it immediately.
+        /// </summary>
+        /// <param name="minutes">Delay in minutes.</param>
+        public static void SetStartDelay(decimal minutes)
+        {
+            try
+            {
+                int mins = Math.Max(1, (int)Math.Round((double)minutes));
+                if (_instance != null && _instance._timerManager != null)
+                {
+                    _instance._timerManager.SetAutoStartDelayMinutes(mins);
+                }
+            }
+            catch
+            {
+                // suppress errors to match existing style
+            }
+        }
         #endregion
 
         /// <summary>
@@ -170,7 +191,7 @@ namespace CPM_WIN
             HumanPlayerName = _loggingManager.LoadPlayerName();
             try
             {
-                textToSpeechToolStripMenuItem.Checked = _loggingManager.LoadTextToSpeech();
+               _loggingManager.LoadTextToSpeech();  // Ensure TTS setting is loaded, even if not used here
             }
             catch
             {
@@ -651,56 +672,6 @@ namespace CPM_WIN
         }
         #endregion
 
-        /// <summary>
-        /// Sets the human player name and saves it.
-        /// </summary>
-        /// <param name="name">The player name to set.</param>
-        public static void SetHumanPlayerName(string name)
-        {
-            HumanPlayerName = name;
-            _instance?._loggingManager?.SavePlayerName(name);
-        }
-
-        /// <summary>
-        /// Handles the Edit Human Name menu item click.
-        /// </summary>
-        private void humanNameToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            using (var playerNameForm = new PlayerName())
-            {
-                playerNameForm.ShowDialog();
-                // Reload the player name after editing
-                HumanPlayerName = _loggingManager.LoadPlayerName();
-                MaybeSpeakAsync(string.Format(HUMAN_NAME_SET_FORMAT, HumanPlayerName));
-            }
-        }
-
-        /// <summary>
-        /// Handles the Emulator Path menu item click.
-        /// </summary>
-        private void emulatorPathToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            using (var openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Filter = EXECUTABLE_FILTER;
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    _loggingManager.SaveEmulatorPath(openFileDialog.FileName);
-                    MaybeSpeakAsync(string.Format(EMULATOR_PATH_SET_FORMAT, openFileDialog.FileName));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Handles the Text-to-Speech menu item click.
-        /// </summary>
-        private void textToSpeechToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            bool enabled = !textToSpeechToolStripMenuItem.Checked;
-            _loggingManager.SaveTextToSpeech(enabled);
-            textToSpeechToolStripMenuItem.Checked = enabled;
-            MaybeSpeak(enabled ? TEXT_TO_SPEECH_ENABLED : TEXT_TO_SPEECH_DISABLED);
-        }
 
         /// <summary>
         /// Speaks text synchronously if text-to-speech is enabled.
@@ -723,6 +694,35 @@ namespace CPM_WIN
             if (_loggingManager.LoadTextToSpeech())
             {
                 _speechManager.SpeakAsync(text);
+            }
+        }
+
+        public static void SetHumanPlayerName(string name)
+        {
+            HumanPlayerName = name ?? string.Empty;
+
+            // If a Form1 instance exists, refresh UI/menu state on the UI thread
+            if (_instance != null)
+            {
+                try
+                {
+                    if (_instance.InvokeRequired)
+                        _instance.Invoke((Action)(() => _instance.InitializeMenuState()));
+                    else
+                        _instance.InitializeMenuState();
+                }
+                catch
+                {
+                    // suppress UI update errors to match existing style
+                }
+            }
+        }
+
+        private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var optionsForm = new Options(_loggingManager))
+            {
+                optionsForm.ShowDialog();
             }
         }
     }

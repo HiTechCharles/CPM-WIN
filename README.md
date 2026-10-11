@@ -115,7 +115,7 @@ CPM-WIN (Computer Player Monopoly - Windows) is a companion tool designed for NE
 The application stores data in your Documents folder:
 - **Location**: `Documents\CPM\`
 - **Files**:
-  - `Player Name.txt` - Your saved player name (required for new games)
+	- `Options.xml` - Application options including player name, emulator path, and text-to-speech setting
   - `Last Game.txt` - Most recent game details
   - `Full Log.txt` - Complete game history
   - `Player Report.txt` - Statistical summary
