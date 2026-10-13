@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace CPM_WIN
 {
@@ -36,14 +37,15 @@ namespace CPM_WIN
         private const string TIMER_STATUS_STOPPED = "stopped";
         private const string SAVE_ERROR_TITLE = "Save Error";
         private const string EXECUTABLE_FILTER = "Executable Files (*.exe)|*.exe";
+        private const int AutoSaveIntervalSeconds = 60; // Autosave every 60 seconds
         #endregion
 
         #region Fields
-        private readonly TimerManager _timerManager;
-        private readonly LoggingManager _loggingManager;
-        private readonly SpeechManager _speechManager;
-        private readonly GameManager _gameManager;
-        private readonly PlayerSelector _playerSelector;
+        private TimerManager _timerManager;
+        private LoggingManager _loggingManager;
+        private SpeechManager _speechManager;
+        private GameManager _gameManager;
+        private PlayerSelector _playerSelector;
 
         private static Form1 _instance;
         private int _lastSavedTotalSeconds = -1;
@@ -90,7 +92,8 @@ namespace CPM_WIN
         {
             try
             {
-                int mins = Math.Max(1, (int)Math.Round((double)minutes));
+                // Allow zero minutes (immediate start) but do not allow negative values
+                int mins = Math.Max(0, (int)Math.Round((double)minutes));
                 if (_instance != null && _instance._timerManager != null)
                 {
                     _instance._timerManager.SetAutoStartDelayMinutes(mins);
@@ -111,17 +114,33 @@ namespace CPM_WIN
             InitializeComponent();
             _instance = this;
 
-            // Initialize managers (must be in constructor due to readonly fields)
-            _loggingManager = new LoggingManager();
-            _speechManager = new SpeechManager();
-            _gameManager = new GameManager();
-            _playerSelector = new PlayerSelector();
-            _timerManager = new TimerManager();
+            // Only perform runtime-only initialization when the form is actually running.
+            // The WinForms designer instantiates this class in design-time; avoid performing
+            // file I/O or starting timers during design to prevent designer load errors.
+            if (LicenseManager.UsageMode == LicenseUsageMode.Runtime)
+            {
+                try
+                {
+                    // Initialize managers (must be in constructor due to readonly fields)
+                    _loggingManager = new LoggingManager();
+                    _speechManager = new SpeechManager();
+                    _gameManager = new GameManager();
+                    _playerSelector = new PlayerSelector();
+                    _timerManager = new TimerManager();
 
-            WireUpEventHandlers();
-            InitializeMenuState();
-            InitializeFocus();
-            TryRestoreSession();
+                    // Ensure the timer manager uses the persisted auto-start delay value
+                    try { SetStartDelay(_loggingManager.LoadStartDelay()); } catch { }
+
+                    WireUpEventHandlers();
+                    InitializeMenuState();
+                    InitializeFocus();
+                    TryRestoreSession();
+                }
+                catch
+                {
+                    // Suppress initialization errors to avoid crashing the designer/runtime startup.
+                }
+            }
         }
 
         /// <summary>
@@ -146,7 +165,8 @@ namespace CPM_WIN
                 if (_gameManager.NewGameStarted)
                 {
                     int totalSeconds = (int)elapsed.TotalSeconds;
-                    if (totalSeconds != _lastSavedTotalSeconds && totalSeconds % 5 == 0)
+                    // Autosave once every AutoSaveIntervalSeconds seconds
+                    if (totalSeconds != _lastSavedTotalSeconds && totalSeconds % AutoSaveIntervalSeconds == 0)
                     {
                         SaveCurrentSession(elapsed, false);
                         _lastSavedTotalSeconds = totalSeconds;

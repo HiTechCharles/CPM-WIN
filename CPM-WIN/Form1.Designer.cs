@@ -44,6 +44,7 @@
             this.GameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveExitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.readToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewRecordsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.timerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -52,7 +53,6 @@
             this.startToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stoPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.emulatorPathToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.AssetsNUD)).BeginInit();
             this.MainMenuMST.SuspendLayout();
             this.SuspendLayout();
@@ -230,6 +230,14 @@
             this.newGameToolStripMenuItem.Text = "&New Game";
             this.newGameToolStripMenuItem.Click += new System.EventHandler(this.newGameToolStripMenuItem_Click);
             // 
+            // optionsToolStripMenuItem
+            // 
+            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
+            this.optionsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
+            this.optionsToolStripMenuItem.Text = "&Options...";
+            this.optionsToolStripMenuItem.Click += new System.EventHandler(this.optionsToolStripMenuItem_Click);
+            // 
             // readToolStripMenuItem
             // 
             this.readToolStripMenuItem.Name = "readToolStripMenuItem";
@@ -261,15 +269,15 @@
             // 
             this.resetToolStripMenuItem.Name = "resetToolStripMenuItem";
             this.resetToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.R)));
-            this.resetToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
+            this.resetToolStripMenuItem.Size = new System.Drawing.Size(311, 40);
             this.resetToolStripMenuItem.Text = "&Reset";
             this.resetToolStripMenuItem.Click += new System.EventHandler(this.resetToolStripMenuItem_Click);
             // 
             // speakToolStripMenuItem
             // 
             this.speakToolStripMenuItem.Name = "speakToolStripMenuItem";
-            this.speakToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.E)));
-            this.speakToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
+            this.speakToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.K)));
+            this.speakToolStripMenuItem.Size = new System.Drawing.Size(311, 40);
             this.speakToolStripMenuItem.Text = "Sp&eak";
             this.speakToolStripMenuItem.Click += new System.EventHandler(this.speakToolStripMenuItem_Click);
             // 
@@ -277,15 +285,15 @@
             // 
             this.startToolStripMenuItem.Name = "startToolStripMenuItem";
             this.startToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.startToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
+            this.startToolStripMenuItem.Size = new System.Drawing.Size(311, 40);
             this.startToolStripMenuItem.Text = "&Start";
             this.startToolStripMenuItem.Click += new System.EventHandler(this.startToolStripMenuItem_Click);
             // 
             // stoPToolStripMenuItem
             // 
             this.stoPToolStripMenuItem.Name = "stoPToolStripMenuItem";
-            this.stoPToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.stoPToolStripMenuItem.Size = new System.Drawing.Size(308, 40);
+            this.stoPToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.P)));
+            this.stoPToolStripMenuItem.Size = new System.Drawing.Size(311, 40);
             this.stoPToolStripMenuItem.Text = "St&op";
             this.stoPToolStripMenuItem.Click += new System.EventHandler(this.stoPToolStripMenuItem_Click);
             // 
@@ -293,14 +301,6 @@
             // 
             this.emulatorPathToolStripMenuItem.Name = "emulatorPathToolStripMenuItem";
             this.emulatorPathToolStripMenuItem.Size = new System.Drawing.Size(32, 19);
-            // 
-            // optionsToolStripMenuItem
-            // 
-            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-            this.optionsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(435, 40);
-            this.optionsToolStripMenuItem.Text = "&Options...";
-            this.optionsToolStripMenuItem.Click += new System.EventHandler(this.optionsToolStripMenuItem_Click);
             // 
             // Form1
             // 

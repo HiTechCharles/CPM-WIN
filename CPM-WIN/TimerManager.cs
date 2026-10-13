@@ -68,12 +68,13 @@ namespace CPM_WIN
         /// Updates the auto-start delay used by this TimerManager instance (in minutes).
         /// Also updates the shared backing value so other parts of the app report the new value.
         /// </summary>
-        /// <param name="minutes">Delay in minutes (minimum 1).</param>
+        /// <param name="minutes">Delay in minutes (minimum 0).</param>
         public void SetAutoStartDelayMinutes(int minutes)
         {
             try
             {
-                if (minutes < 1) minutes = 1;
+                // Allow zero minutes (immediate start). Clamp negative values to zero.
+                if (minutes < 0) minutes = 0;
                 _autoStartDelayMs = minutes * 60000;
                 if (_autoStartTimer != null)
                 {
